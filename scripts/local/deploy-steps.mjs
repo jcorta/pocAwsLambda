@@ -2,7 +2,7 @@
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { AWS, fail, FLOCI_URL, info, node, ROOT, step, terraform, terraformOutputs } from "./lib.mjs";
+import { AWS, fail, info, node, ROOT, step, terraform, terraformOutputs } from "./lib.mjs";
 
 export function buildLambdas() {
   step("Build de las Lambdas (esbuild)");
@@ -29,12 +29,13 @@ export async function migrate(outputs) {
 /** Config de runtime del frontend (SPEC §5.2), para `pnpm dev`. No se versiona ni entra al build. */
 export function writeWebConfig(outputs, env) {
   const config = {
-    apiUrl: outputs.api_url,
+    // Rutas del proxy de `pnpm dev`: en Floci ni Cognito ni la API devuelven CORS (hallazgos A8 y A9)
+    apiUrl: "/_floci/api",
     cognito: {
       region: "us-east-1",
       userPoolId: outputs.user_pool_id,
       clientId: outputs.user_pool_client_id,
-      endpoint: FLOCI_URL,
+      endpoint: "/_floci/cognito",
     },
     timezone: env.APP_TIMEZONE ?? "America/Argentina/Buenos_Aires",
   };

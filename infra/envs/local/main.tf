@@ -60,6 +60,10 @@ provider "aws" {
 
 locals {
   name = "reservas-local"
+  # URL del sitio en Floci (verificado en el spike F0). Se arma con el nombre del bucket, que es conocido,
+  # así puede entrar en el CORS de la API sin crear un ciclo entre módulos.
+  site_url = "http://${local.name}-site.s3-website.localhost.floci.io:4566"
+  api_url  = "http://${module.api.api_id}.execute-api.localhost.floci.io:4566"
 }
 
 module "network" {
@@ -98,18 +102,51 @@ module "api" {
   # En Floci el emisor es la URL de Floci + el id del pool (SPEC §7.3)
   cognito_issuer_url = "${var.public_floci_url}/${module.auth.user_pool_id}"
   cognito_client_id  = module.auth.client_id
-  cors_origins       = ["http://localhost:3000"]
+  # El navegador entra siempre por el proxy del mismo origen (hallazgo A8): :3000 (`pnpm dev`) y :3002 (sitio en S3).
+  # El website de S3 directo queda permitido por si se abre sin proxy, aunque ahí el login falla por CORS de Cognito.
+  cors_origins = ["http://localhost:3000", "http://localhost:3002", local.site_url]
 
   notifications_queue_url = module.notifications.queue_url
   notifications_queue_arn = module.notifications.queue_arn
   ses_from                = module.notifications.ses_from
 }
 
+module "frontend" {
+  source = "../../modules/frontend"
+  name   = local.name
+  runtime_config = {
+    # Ruta del mismo origen: la HTTP API de Floci no devuelve CORS en las respuestas (hallazgo A9)
+    apiUrl = "/_floci/api"
+    cognito = {
+      region     = "us-east-1"
+      userPoolId = module.auth.user_pool_id
+      clientId   = module.auth.client_id
+      # Ruta del mismo origen: la atiende el proxy local, porque Cognito de Floci no soporta CORS (hallazgo A8)
+      endpoint = "/_floci/cognito"
+    }
+    timezone = var.timezone
+  }
+}
+
 # --- Outputs (SPEC §7.5): los leen los scripts de deploy, seed y tests con `terraform output -json` ---
 
 output "api_url" {
   # En Floci, api_endpoint devuelve una URL con formato de AWS que no sirve (hallazgo A5)
-  value = "http://${module.api.api_id}.execute-api.localhost.floci.io:4566"
+  value = local.api_url
+}
+
+output "frontend_bucket" {
+  value = module.frontend.bucket
+}
+
+output "frontend_url" {
+  description = "URL para el navegador: el sitio en S3 a través del proxy del mismo origen (`pnpm local:site`)."
+  value       = "http://localhost:3002/"
+}
+
+output "frontend_s3_url" {
+  description = "Website de S3 directo (sin proxy: el login con Cognito no funciona por CORS)."
+  value       = "${local.site_url}/"
 }
 
 output "user_pool_id" {

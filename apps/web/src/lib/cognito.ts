@@ -8,7 +8,7 @@ import {
   ResendConfirmationCodeCommand,
   SignUpCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import type { RuntimeConfig } from "./config.ts";
+import { cognitoEndpoint, type RuntimeConfig } from "./config.ts";
 import { sessionFromTokens, type Session } from "./session.ts";
 
 /** Error de autenticación con un motivo que la UI sabe mostrar. */
@@ -61,10 +61,11 @@ export interface CognitoAuth {
   signOut(session: Session): Promise<void>;
 }
 
-export function createCognitoAuth(config: RuntimeConfig): CognitoAuth {
+export function createCognitoAuth(config: RuntimeConfig, origin = window.location.origin): CognitoAuth {
+  const endpoint = cognitoEndpoint(config, origin);
   const client = new CognitoIdentityProviderClient({
     region: config.cognito.region,
-    ...(config.cognito.endpoint ? { endpoint: config.cognito.endpoint } : {}),
+    ...(endpoint ? { endpoint } : {}),
   });
   const ClientId = config.cognito.clientId;
   const call = async <T>(fn: () => Promise<T>): Promise<T> => {

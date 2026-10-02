@@ -24,9 +24,9 @@ export function fail(msg) {
 }
 
 /** Ejecuta un comando mostrando su salida. Corta el script si falla. */
-export function run(command, args, { capture = false, allowFailure = false } = {}) {
+export function run(command, args, { capture = false, allowFailure = false, cwd = ROOT } = {}) {
   const r = spawnSync(command, args, {
-    cwd: ROOT,
+    cwd,
     encoding: "utf8",
     stdio: capture ? ["ignore", "pipe", "inherit"] : "inherit",
   });

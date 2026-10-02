@@ -19,6 +19,7 @@ export default tseslint.config(
         AbortSignal: "readonly",
         TextDecoder: "readonly",
         setTimeout: "readonly",
+        URL: "readonly",
       },
     },
   },

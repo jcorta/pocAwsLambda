@@ -439,6 +439,8 @@ El mismo build sirve para Floci y para AWS. Al arrancar, la app lee `/config.jso
 ```
 En AWS real `cognito.endpoint` se omite, y el SDK usa el endpoint de AWS.
 
+- **En local, `cognito.endpoint` es `/_floci/cognito` y `apiUrl` es `/_floci/api`** (hallazgos A8 y A9). En Floci, ni Cognito ni las respuestas de la HTTP API traen headers CORS, así que el navegador los alcanza a través de un proxy del mismo origen que atiende en `localhost` (§10). El frontend resuelve las rutas relativas contra el origen de la página. En AWS, los dos son URLs absolutas (o el endpoint se omite) y no hay proxy.
+
 - **`config.json` nunca forma parte del build:**
   - El archivo `apps/web/public/config.json`, que genera `local:up` para `pnpm dev`, está en `.gitignore` y se excluye del export.
   - El deploy del sitio (`aws s3 sync`) usa `--exclude config.json`, para no pisar ni borrar el que escribió Terraform.
@@ -669,7 +671,7 @@ provider "aws" {
 | `lambda_architecture` | `x86_64` | `arm64` (más barato) |
 | `cognito_issuer_url` | `http://localhost:4566/<poolId>` (verificado en F0) | `https://cognito-idp.<region>.amazonaws.com/<poolId>` |
 | `api_url` (lo calcula el root) | `http://<apiId>.execute-api.localhost.floci.io:4566`. En Floci, `api_endpoint` devuelve una URL con formato de AWS que no sirve (hallazgo A5) | `aws_apigatewayv2_api.api_endpoint` |
-| `cors_origins` | `http://localhost:3000` y `http://<bucket>.s3-website.localhost.floci.io:4566` | Dominio de CloudFront |
+| `cors_origins` | `http://localhost:3000` (`pnpm dev`) y `http://localhost:3002` (sitio en S3 por el proxy, hallazgo A8) | Dominio de CloudFront |
 | `ses_from` | `no-reply@example.com` (Floci verifica al instante) | Remitente del dominio verificado |
 | `network_egress` | `none` | Decisión D-3.1 |
 
@@ -894,9 +896,10 @@ Decisiones de base:
 | `npm run doctor` | Verifica los prerequisitos (ver arriba) |
 | `pnpm install` | Instala las dependencias del monorepo |
 | `pnpm local:up [--ui]` | `doctor`, levanta Floci (y opcionalmente Floci UI), construye, ejecuta `terraform apply` en `envs/local`, migra, carga el seed y genera `apps/web/public/config.json`. Al final imprime las URLs y las credenciales de prueba. Es idempotente: se puede volver a correr. La primera vez tarda unos 2 minutos, porque crear la instancia RDS lleva unos 90 s (hallazgo A7) |
-| `pnpm dev` | Levanta `next dev` en `:3000` contra la API de Floci, con recarga en caliente del frontend |
+| `pnpm dev` | Frontend en `http://localhost:3000` contra la API de Floci, con recarga en caliente. `next dev` corre en `:3001` detrás del proxy del mismo origen (hallazgo A8) |
 | `pnpm deploy:local` | Reconstruye las Lambdas y aplica Terraform. Es el ciclo rápido después de cambiar el código del backend |
-| `pnpm deploy:web:local` | Construye el export estático y lo sube al bucket de Floci |
+| `pnpm deploy:web:local` | Construye el export estático y lo sincroniza con el bucket de Floci, sin tocar `config.json` |
+| `pnpm local:site` | Sirve el sitio publicado en S3 en `http://localhost:3002`, por el proxy del mismo origen. Es la URL para probarlo en el navegador; los E2E de UI la levantan solos |
 | `pnpm test` / `test:integration` / `test:infra` | Tests unitarios, de integración y de infra. No necesitan el entorno levantado |
 | `pnpm test:e2e` / `test:e2e:ui` | E2E de la API y de la UI contra el entorno local |
 | `pnpm local:seed` | Vuelve a correr el seed (§10.2), por ejemplo después de borrar datos. Es idempotente |
@@ -918,7 +921,9 @@ Decisiones de base:
 | Puerto | Servicio |
 |---|---|
 | 4566 | Floci (todas las APIs de AWS) |
-| 3000 | `next dev` |
+| 3000 | `pnpm dev` (proxy del mismo origen) |
+| 3001 | `next dev`, detrás del proxy |
+| 3002 | Sitio en S3 por el proxy (`pnpm local:site`, E2E de UI) |
 | 4500 | Floci UI (opcional) |
 | 7001–7010 | Proxy de RDS de Floci. La primera instancia usa el 7001 |
 
@@ -957,6 +962,7 @@ La red es el costo dominante. Por eso conviene desmontar el entorno cuando no se
 | Floci se comporta distinto que AWS: no aplica IAM ni la red | Errores que solo aparecen en AWS | Tests de infra sobre el plan (§8.2) y smoke test en AWS al migrar |
 | Puntos de integración de §7.6 (emisor de tokens, endpoints dentro de la Lambda, host de RDS) | Bloquea el entorno local | **Spike F0** antes de construir nada más |
 | Floci es un proyecto joven | Bugs o cambios que rompen | Imagen con versión fija (2.1.0), actualización deliberada que vuelve a correr el spike F0, y reporte de issues |
+| Cognito de Floci no soporta CORS (hallazgo A8) | El login desde el navegador falla si no pasa por el proxy local | Proxy del mismo origen en `localhost` (`pnpm dev` y `pnpm local:site`). No aplica a AWS real |
 | Las URLs `*.localhost.floci.io` dependen de un DNS público que resuelve a `127.0.0.1` (hallazgo A6) | Sin conexión a Internet, la API y el sitio no resuelven desde el host | Documentado en el README. Alternativa sin conexión: una entrada en el archivo `hosts` para el `apiId` |
 | Agotar las conexiones de Postgres con muchas Lambdas en paralelo | Errores 5xx con carga | `max: 1` por instancia y concurrencia reservada acotada. RDS Proxy en AWS |
 | Arranques en frío de Lambdas en VPC | Latencia en el primer request | Aceptado en el POC. Bundles chicos con esbuild |
@@ -975,7 +981,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 | **F2 Dominio y base de datos** ✔ | Esquema de Drizzle y migraciones (incluida la exclusion constraint), dominio puro, repositorios, servicios, tests de integración con concurrencia | Casos de §8.2 (dominio e integración) en verde. Cobertura del dominio ≥ 90 % |
 | **F3 API e infra** ✔ | Módulos `network`, `database`, `auth` y `api`, Lambdas `me`, `resources`, `bookings`, `admin` y `migrator`, seed, `local:up`, E2E API, job `e2e-local` | Flujo de reserva completo por API en Floci, en local y en CI |
 | **F4 Notificaciones** ✔ | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |
-| **F5 Frontend** | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
+| **F5 Frontend** ✔ | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
 | **F6 Endurecimiento** | `terraform test`, umbrales de cobertura, `envs/aws` e `infra/bootstrap` completos (sin aplicar), `deploy-aws.yml` deshabilitado, README con guía de inicio | Un desarrollador nuevo levanta todo con `npm run doctor`, `pnpm install` y `pnpm local:up` siguiendo solo el README |
 | **F7 Migración a AWS** (opcional) | Pasos de §11.1 | Smoke tests en verde en AWS real |
 

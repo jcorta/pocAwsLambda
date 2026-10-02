@@ -15,9 +15,9 @@ import {
   ALL_WEEK,
   api,
   capturedEmails,
-  config,
   createUser,
   dayFromToday,
+  FLOCI_URL,
   waitForEmail,
   type TestUser,
 } from "./support.ts";
@@ -26,7 +26,7 @@ let admin: TestUser;
 
 beforeAll(async () => {
   // Bandeja de SES vacía al empezar (SPEC §8.3). Los tests igual filtran por su propio usuario.
-  await fetch(`${config.cognito.endpoint}/_aws/ses`, { method: "DELETE" });
+  await fetch(`${FLOCI_URL}/_aws/ses`, { method: "DELETE" });
   admin = await createUser({ admin: true });
 });
 
