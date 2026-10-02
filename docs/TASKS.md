@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ◐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ✔ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -63,14 +63,14 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] E2E de la API: auth, reservas, límites y cancelación (12 tests)
 - [x] Jobs `build` y `e2e-local` en la CI (el build corre dentro de `unit` y de `e2e-local`; el job `build` con artifacts va en F6)
 
-## [ ] F4 — Notificaciones
+## [x] F4 — Notificaciones
 > Terminado cuando: el E2E verifica en `/_aws/ses` los emails de confirmación y de cancelación.
 
 - [x] Módulo `notifications`: SQS con visibility de 180 s, DLQ tras 3 intentos e identidad SES
 - [x] Publicación después del commit en `bookings` (`useQueueUrlAsEndpoint: false`, log `notification_publish_failed`)
 - [x] Lambda `notifier` idempotente, con plantillas en español
 - [x] Tests de integración del notifier
-- [ ] E2E de emails en `/_aws/ses`
+- [x] E2E de emails en `/_aws/ses`
 - [x] Perfil de Floci UI con la bandeja de emails de SES (hecho en F1; Mailpit descartado)
 
 ## [ ] F5 — Frontend
