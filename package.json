@@ -18,6 +18,7 @@
     "secrets:staged": "node scripts/gitleaks.mjs --staged",
     "secrets:history": "node scripts/gitleaks.mjs --all",
     "build": "pnpm -r --if-present build",
+    "dev": "pnpm --filter @reservas/web dev",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

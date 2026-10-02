@@ -17,6 +17,8 @@ permissions:
 env:
   # Desactiva la ejecución de los hooks de git en CI (prepare los instala igual, sin efecto)
   LEFTHOOK: "0"
+  # Next.js no envía telemetría desde la CI
+  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   # Detecta si el cambio toca algo más que documentación. Los jobs pesados (integración, build, E2E)

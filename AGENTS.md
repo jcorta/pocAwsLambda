@@ -49,6 +49,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `docker compose --profile ui down -v` | Baja el entorno y borra el volumen de datos de Floci (es efímero) |
 | `docker compose run --rm terraform <args>` | Terraform en contenedor (perfil `tools`), con la versión de `.terraform-version` |
 | `pnpm local:up [--ui]` | **Todo el entorno local de punta a punta:** `doctor`, Floci (y Floci UI), build, Terraform, migraciones, seed y `apps/web/public/config.json`. Tarda unos 3 minutos desde cero y 1 minuto si ya está levantado. Es idempotente |
+| `pnpm dev` | Frontend con `next dev` en `:3000` contra la API de Floci (usa el `config.json` que genera `local:up`) |
 | `pnpm deploy:local` | Ciclo rápido tras cambiar el backend: build, Terraform y migraciones (~50 s) |
 | `pnpm local:seed` | Seed idempotente: usuarios de `.env.local` y 3 recursos de ejemplo |
 | `pnpm local:logs [lambda]` | Logs de Floci, o de una Lambda (`me`, `resources`, `bookings`, `admin` o `migrator`) |
@@ -125,6 +126,13 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - El publicador de producción (`sqsPublisher`) nunca lanza y registra `notification_publish_failed`.
   - El `notifier` es idempotente por `event_id`. Si SES falla, borra el registro y el mensaje se reintenta; tras 3 intentos va a la DLQ.
   - Las fechas de los emails se arman con `Intl.DateTimeFormat#formatToParts`, no con el formato completo, que cambia según la versión de ICU.
+- **Frontend** (`apps/web`):
+  - Next.js con `output: "export"`: sin Server Components con datos, API routes ni middleware. Las rutas con parámetros usan query params (`/resources/view?id=…`), y todas las páginas son `"use client"`.
+  - Las páginas que usan `useSearchParams` van dentro de `<Suspense>`, porque si no el export estático falla.
+  - Un `page.tsx` solo exporta la página; la lógica reutilizable va en `src/lib`.
+  - Los datos se piden con `useAuth().api(...)`, que valida contra los esquemas de `@reservas/shared` y maneja el refresh ante un 401. Los mensajes de error salen de `errorMessage()`.
+  - **Los tokens nunca se escriben** en `localStorage`, `sessionStorage` ni cookies (D-2.3).
+  - Next.js envía telemetría por defecto: en la CI está desactivada con `NEXT_TELEMETRY_DISABLED=1`.
 - **Repositorios** (`src/repositories`): aceptan `DbOrTx`, así funcionan dentro o fuera de una transacción. Las fechas se convierten en el borde con `toDate` y `toInstant`.
 - **Cobertura:** `pnpm test` en `services/api` mide la cobertura y falla si `src/domain/**` baja del 90 % de líneas. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
 - **Las reglas de concurrencia viven en la base de datos**: exclusion constraint y `FOR UPDATE` (SPEC §3.3). No reemplazarlas por chequeos en código.

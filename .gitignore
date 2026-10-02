@@ -21,6 +21,8 @@ blob-report/
 
 # Config del frontend generada por local:up
 apps/web/public/config.json
+# Lo genera `next build` (referencia tipos de .next/, que no se versiona)
+apps/web/next-env.d.ts
 
 # Terraform
 .terraform/
