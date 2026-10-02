@@ -1,0 +1,66 @@
+# Ejecuta el spike F0 (docs/spikes/floci.md) en el runner de GitHub
+name: spike-f0
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "spikes/f0-floci/**"
+      - ".github/workflows/spike-f0.yml"
+
+concurrency:
+  group: spike-f0-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: spikes/f0-floci
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            spikes/f0-floci/package-lock.json
+            spikes/f0-floci/lambda/package-lock.json
+
+      - name: Instalar dependencias
+        run: |
+          npm ci --prefix lambda --omit=dev
+          npm ci
+
+      - name: Levantar Floci
+        run: |
+          docker compose up -d floci
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:4566/_floci/health > /dev/null && exit 0
+            sleep 2
+          done
+          echo "Floci no respondió a tiempo" && exit 1
+
+      - name: Terraform apply
+        run: |
+          docker compose run --rm -T terraform init -input=false -no-color
+          docker compose run --rm -T terraform apply -auto-approve -input=false -no-color
+
+      - name: Verificar
+        run: |
+          docker compose run --rm -T terraform output -json > outputs.json
+          node verify.mjs
+
+      - name: Logs de Floci (si falló)
+        if: failure()
+        run: docker logs floci 2>&1 | tail -n 300
+
+      - name: Bajar entorno
+        if: always()
+        run: docker compose down -v

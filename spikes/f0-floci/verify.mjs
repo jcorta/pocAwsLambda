@@ -183,3 +183,5 @@ record("—", "Refresh token revocado tras GlobalSignOut", refreshAfter.startsWi
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} chequeos OK`);
+// Código de salida distinto de 0 si algo falló, para que la CI lo detecte
+process.exitCode = failed.length > 0 ? 1 : 0;
