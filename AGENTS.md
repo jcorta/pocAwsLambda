@@ -57,6 +57,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm test` | Tests unitarios (Vitest) de cada paquete |
 | `pnpm build` | Bundles de las Lambdas con esbuild en `services/api/dist/lambdas/<nombre>/` |
 | `pnpm --filter @reservas/api check:bundles` | Carga cada bundle y verifica que las Lambdas de la API respondan 401 sin ID token (detecta problemas de ESM o CommonJS) |
+| `pnpm test:e2e` | E2E de la API contra Floci. **Requiere `pnpm local:up`** (lee `apps/web/public/config.json`) |
 | `pnpm test:integration` | Tests de integración contra Postgres 16 real (Testcontainers). **Requiere Docker** |
 | `pnpm --filter @reservas/api db:generate` | Genera una migración SQL a partir de los cambios en `src/infra/db/schema.ts`. Lo que Drizzle no expresa (exclusion constraints, extensiones, datos) va en una migración manual (`drizzle-kit generate --custom`) |
 | `pnpm secrets:staged` / `pnpm secrets:history` | gitleaks (en Docker) sobre lo que está por commitearse, o sobre todo el historial |
@@ -68,7 +69,9 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - **`ci.yml`** corre en cada PR y en cada push a `main`. Jobs:
   - `changes`: detecta si el cambio toca algo más que `docs/` y `*.md`.
   - `lint`: ESLint, Prettier, typecheck, `terraform fmt` y gitleaks sobre los commits del PR.
-  - `unit`: tests unitarios.
+  - `unit`: tests unitarios, build y `check:bundles`.
+  - `integration`: Testcontainers.
+  - `e2e-local`: `pnpm local:up`, `pnpm test:e2e` y `pnpm local:reset` en el runner. Es el job más lento, de unos 5 minutos.
 - **`spike-f0.yml`** corre el spike de Floci cuando cambia `spikes/f0-floci/**`, o a mano.
 - **Un job nuevo que sea pesado** (integración, build, E2E) se condiciona con `if: needs.changes.outputs.code == 'true'`, así se saltea en los PRs que solo tocan documentación sin quedar pendiente.
 - **Antes de pedir un merge**, la CI del PR tiene que estar en verde. Se sigue con `gh pr checks <n> --watch`.

@@ -239,6 +239,9 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@aws-sdk/client-cognito-identity-provider':
+        specifier: ^3.1145.0
+        version: 3.1145.0
       '@testcontainers/postgresql':
         specifier: ^12.2.0
         version: 12.2.0

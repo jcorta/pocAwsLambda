@@ -811,7 +811,7 @@ Se dispara en cada pull request y en cada push a `main`. Usa `concurrency` para 
 | `integration` | Tests con Testcontainers (el runner `ubuntu-latest` trae Docker) |
 | `infra-test` | `terraform test` en los módulos |
 | `build` | Zips de las Lambdas y export estático de la web, subidos como artifacts |
-| `e2e-local` | 1. `npm run doctor`. 2. `docker compose up -d floci`. 3. Descarga de los artifacts. 4. `terraform apply` en `envs/local`. 5. Invocación del migrator. 6. Seed. 7. E2E API. 8. Deploy de la web al S3 de Floci. 9. E2E UI. Si falla, sube como artifacts los logs de Floci y de las Lambdas y las trazas de Playwright |
+| `e2e-local` | 1. `pnpm local:up`, que hace `doctor`, Floci, build, `terraform apply`, migrator y seed, igual que en una máquina de desarrollo. 2. E2E de la API. 3. (F5) Deploy de la web al S3 de Floci y E2E de la UI. Si falla, muestra los logs de Floci y de cada Lambda. Siempre termina con `pnpm local:reset`. **Compila por su cuenta**: la reutilización de los artifacts de `build` llega en F6, cuando la necesite `deploy-aws.yml` |
 
 - **`e2e-local` corre en cada PR y en cada push a `main`** (decisión D-3.2). Es un check requerido para mergear.
 - **Filtros por ruta:** si un PR solo modifica documentación (`docs/**`, `**/*.md`), los jobs `integration`, `infra-test`, `build` y `e2e-local` se saltean. Se implementa con un job inicial `changes` (por ejemplo, con `dorny/paths-filter`) y condiciones `if:` en cada job. **No** se usa `paths-ignore` a nivel workflow: así los checks requeridos quedan como "omitidos" (cuentan como aprobados) en lugar de quedar pendientes para siempre.

@@ -8,6 +8,7 @@
     "check:bundles": "node scripts/check-bundles.mjs",
     "test": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1145.0",
     "@testcontainers/postgresql": "^12.2.0",
     "@types/aws-lambda": "^8.10.164",
     "@types/pg": "^8.23.1",

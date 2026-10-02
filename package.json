@@ -23,7 +23,8 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "test:integration": "pnpm -r --if-present test:integration"
+    "test:integration": "pnpm -r --if-present test:integration",
+    "test:e2e": "pnpm -r --if-present test:e2e"
   },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1145.0",
