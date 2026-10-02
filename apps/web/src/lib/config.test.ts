@@ -16,7 +16,11 @@ describe("loadRuntimeConfig (SPEC §5.2)", () => {
   });
 
   it("el endpoint de Cognito es opcional (en AWS se omite)", async () => {
-    const { endpoint: _omitted, ...cognito } = valid.cognito;
+    const cognito = {
+      region: valid.cognito.region,
+      userPoolId: valid.cognito.userPoolId,
+      clientId: valid.cognito.clientId,
+    };
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ...valid, cognito })));
     await expect(loadRuntimeConfig(fetchImpl)).resolves.toMatchObject({ cognito: { clientId: "c" } });
   });
