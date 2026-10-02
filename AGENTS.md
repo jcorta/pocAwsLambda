@@ -24,8 +24,9 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 
 ## Estado actual
 - Hecho: la fase F0 (spike de Floci en `spikes/f0-floci/`), verificada en Windows y en el runner de GitHub (workflow `spike-f0`).
-- Hecho: F1, la base del monorepo (pnpm, TypeScript, lint, tests, `doctor`, compose, hook de gitleaks y CI). Los paquetes son esqueletos; su contenido llega en F2 a F5.
-- Próximo: F2, dominio y base de datos.
+- Hecho: F1, la base del monorepo (pnpm, TypeScript, lint, tests, `doctor`, compose, hook de gitleaks y CI).
+- Hecho: F2, dominio y base de datos (esquema, migraciones, dominio, repositorios y servicios de `services/api`).
+- Próximo: F3, API e infraestructura (handlers, Lambdas, Terraform en Floci y E2E).
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)
@@ -91,6 +92,8 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - **El dominio es puro.** `services/api/src/domain` no importa AWS, la base de datos ni el reloj del sistema: `now` y `timezone` se reciben como parámetros.
 - **Las fechas se calculan con Temporal** (`temporal-polyfill`), nunca con `Date` ni con offsets fijos. Los turnos se generan en tiempo absoluto (regla de los días de cambio de hora en SPEC §2.2).
 - **Las reglas devuelven `RuleResult`** (`{ ok: true }` o `{ ok: false, code, details }`, en `src/domain/types.ts`) en lugar de lanzar excepciones. Los códigos salen de `ERROR_CODES` en `@reservas/shared`.
+- **Servicios** (`src/services`): reciben `ServiceDeps` (`db`, `now()` y `timezone`) y un `Actor`, y devuelven `ServiceResult`. Dentro de una transacción, una regla que falla se corta con `fail(...)`, que revierte la transacción, y `catchFailure` la convierte en resultado. Los errores de Postgres se traducen por SQLSTATE (`pgErrorCode`): `23P01` → `SLOT_TAKEN` y `23505` → `RESOURCE_NAME_TAKEN`.
+- **Repositorios** (`src/repositories`): aceptan `DbOrTx`, así funcionan dentro o fuera de una transacción. Las fechas se convierten en el borde con `toDate` y `toInstant`.
 - **Cobertura:** `pnpm test` en `services/api` mide la cobertura y falla si `src/domain/**` baja del 90 % de líneas. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
 - **Las reglas de concurrencia viven en la base de datos**: exclusion constraint y `FOR UPDATE` (SPEC §3.3). No reemplazarlas por chequeos en código.
 - **Los esquemas Zod se definen una sola vez**, en `packages/shared`.

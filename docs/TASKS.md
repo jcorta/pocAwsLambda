@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ◐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -32,7 +32,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] `ci.yml` con los jobs `changes`, `lint` (con `gitleaks`) y `unit`
 - [x] Primer PR con la CI en verde (#7)
 
-## [ ] F2 — Dominio y base de datos
+## [x] F2 — Dominio y base de datos
 > Terminado cuando: los casos de §8.2 de dominio e integración están en verde, con cobertura del dominio ≥ 90 %.
 
 - [x] Esquema Drizzle: `users`, `resources`, `resource_opening_hours`, `bookings`, `settings` y `notification_log`
@@ -40,10 +40,10 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Dominio: generación de turnos con zona horaria (`now` y `timezone` inyectados)
 - [x] Dominio: reglas RN-02, RN-03, RN-05 y RN-06 (además: estado de turnos de CU-03 y validación de horario de CU-07)
 - [x] Tests unitarios de dominio, en dos zonas horarias y con los casos de borde de §8.2 (56 tests, cobertura 100 %)
-- [ ] Repositorios
-- [ ] Servicios: reservar (transacción de §3.3), cancelar, gestionar recursos y configuración
+- [x] Repositorios
+- [x] Servicios: reservar (transacción de §3.3), cancelar, gestionar recursos y configuración (además: disponibilidad de CU-03)
 - [x] Setup de Testcontainers con `postgres:16`
-- [ ] Tests de integración: ~~migraciones~~ (hecho, con las constraints), concurrencia RN-01 (20 usuarios) y RN-05 (6 de 3), RN-08 y "cancelar libera el turno"
+- [x] Tests de integración: migraciones, concurrencia RN-01 (20 usuarios) y RN-05 (6 de 3), RN-08 y "cancelar libera el turno" (37 tests; los del notifier van en F4)
 - [x] Job `integration` en la CI
 
 ## [ ] F3 — API e infraestructura
