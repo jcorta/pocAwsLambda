@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+**/package-lock.json
+**/dist/
+**/.next/
+**/out/
+**/coverage/
+.terraform/
+# El spike F0 queda como registro histórico, sin reformatear
+spikes/
+# La documentación se edita a mano; Prettier reformatearía las tablas
+*.md

@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ☐ · F2 ☐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ◐ · F2 ☐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -20,11 +20,11 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 ## [ ] F1 — Base del monorepo
 > Terminado cuando: `npm run doctor` y `pnpm test` pasan, y la CI corre en los PR.
 
-- [ ] `package.json` raíz con `packageManager` (pnpm) y `engines`, `pnpm-workspace.yaml` y `.nvmrc`
-- [ ] Paquetes `apps/web`, `services/api` y `packages/shared` (esqueleto)
-- [ ] TypeScript base (`tsconfig.base.json`) compartido por los paquetes
-- [ ] ESLint y Prettier
-- [ ] Vitest en cada paquete, con un test de humo
+- [x] `package.json` raíz con `packageManager` (pnpm) y `engines`, `pnpm-workspace.yaml` y `.nvmrc`
+- [x] Paquetes `apps/web`, `services/api` y `packages/shared` (esqueleto)
+- [x] TypeScript base (`tsconfig.base.json`) compartido por los paquetes
+- [x] ESLint y Prettier
+- [x] Vitest en cada paquete, con un test de humo
 - [ ] `scripts/doctor.mjs` y `npm run doctor` (§10)
 - [ ] `docker-compose.yml` definitivo: Floci con la configuración A1, perfiles `ui` y `mail`, y Terraform en contenedor
 - [ ] `.env.example` y `.terraform-version`
