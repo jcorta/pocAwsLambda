@@ -897,16 +897,19 @@ Decisiones de base:
 | `pnpm deploy:web:local` | Construye el export estático y lo sube al bucket de Floci |
 | `pnpm test` / `test:integration` / `test:infra` | Tests unitarios, de integración y de infra. No necesitan el entorno levantado |
 | `pnpm test:e2e` / `test:e2e:ui` | E2E de la API y de la UI contra el entorno local |
-| `pnpm local:logs [lambda]` | Muestra los logs de Floci o de una Lambda |
-| `pnpm local:down` | Detiene los contenedores |
-| `pnpm local:reset` | Detiene y borra todo: contenedores, volúmenes y el state local de Terraform |
+| `pnpm local:seed` | Vuelve a correr el seed (§10.2), por ejemplo después de borrar datos. Es idempotente |
+| `pnpm local:logs [lambda]` | Muestra los logs de Floci o, con un nombre (`me`, `resources`, `bookings`, `admin` o `migrator`), los de los últimos 30 min de esa Lambda |
+| `pnpm local:down` | Detiene los contenedores y borra los volúmenes de Floci, incluidos los de RDS. Floci guarda todo en memoria, así que sin el contenedor esos volúmenes ya no sirven. El state local se conserva, y el próximo `local:up` lo descarta porque detecta que Floci arrancó de nuevo |
+| `pnpm local:reset` | Lo mismo que `local:down`, y además borra el state local de Terraform, los zips y `apps/web/public/config.json`. Conserva `.env.local` |
 
 ### 10.2 Seed
 - Usuarios en Cognito, creados ya confirmados y sin email, como se describe en §2.4 (después de CU-10):
   - `admin@example.com`, en el grupo `admin`.
   - `user@example.com`.
 - Las contraseñas vienen de `.env.local`. En el repo se versiona `.env.example`, con valores por defecto aptos solo para local.
-- En la base: 3 recursos de ejemplo (§3.4). La fila de `settings` ya la creó la migración.
+- En la base: 3 recursos de ejemplo (§3.4), creados **a través de la API** con el token del admin, como lo haría un usuario. La fila de `settings` ya la creó la migración.
+- Los dos usuarios se registran en la tabla `users` con `GET /v1/me`.
+- Es idempotente: si los usuarios o los recursos ya existen, no los duplica.
 - El seed solo existe para `local` y CI. Nunca se ejecuta en `envs/aws`.
 
 ### 10.3 Puertos

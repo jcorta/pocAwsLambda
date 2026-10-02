@@ -35,8 +35,9 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Zips de las Lambdas que arma Terraform (archive_file)
+# Zips de las Lambdas que arma Terraform (archive_file) y marca de la instancia de Floci de local:up
 infra/envs/*/.build/
+infra/envs/local/.floci-started-at
 
 # Artefactos del spike F0
 spikes/f0-floci/outputs.json
