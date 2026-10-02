@@ -15,11 +15,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "test:integration": "pnpm -r --if-present test:integration"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "~24.19.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "lefthook": "^2.1.16",

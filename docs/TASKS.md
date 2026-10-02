@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ☐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ◐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -35,16 +35,16 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 ## [ ] F2 — Dominio y base de datos
 > Terminado cuando: los casos de §8.2 de dominio e integración están en verde, con cobertura del dominio ≥ 90 %.
 
-- [ ] Esquema Drizzle: `users`, `resources`, `resource_opening_hours`, `bookings`, `settings` y `notification_log`
-- [ ] Migración inicial con SQL manual: `btree_gist`, exclusion constraint y CHECKs
+- [x] Esquema Drizzle: `users`, `resources`, `resource_opening_hours`, `bookings`, `settings` y `notification_log`
+- [x] Migración inicial con SQL manual: `btree_gist`, exclusion constraint, CHECKs y fila de `settings`
 - [ ] Dominio: generación de turnos con zona horaria (`now` y `timezone` inyectados)
 - [ ] Dominio: reglas RN-02, RN-03, RN-05 y RN-06
 - [ ] Tests unitarios de dominio, en dos zonas horarias y con los casos de borde de §8.2
 - [ ] Repositorios
 - [ ] Servicios: reservar (transacción de §3.3), cancelar, gestionar recursos y configuración
-- [ ] Setup de Testcontainers con `postgres:16`
-- [ ] Tests de integración: migraciones, concurrencia RN-01 (20 usuarios) y RN-05 (6 de 3), RN-08 y "cancelar libera el turno"
-- [ ] Job `integration` en la CI
+- [x] Setup de Testcontainers con `postgres:16`
+- [ ] Tests de integración: ~~migraciones~~ (hecho, con las constraints), concurrencia RN-01 (20 usuarios) y RN-05 (6 de 3), RN-08 y "cancelar libera el turno"
+- [x] Job `integration` en la CI
 
 ## [ ] F3 — API e infraestructura
 > Terminado cuando: el flujo de reserva completo funciona por API en Floci, en local y en CI.

@@ -5,6 +5,8 @@ pnpm-lock.yaml
 **/out/
 **/coverage/
 .terraform/
+# Las genera drizzle-kit (SQL y snapshots); reformatearlas genera ruido en cada `db:generate`
+services/api/migrations/
 # El spike F0 queda como registro histórico, sin reformatear
 spikes/
 # La documentación se edita a mano; Prettier reformatearía las tablas
