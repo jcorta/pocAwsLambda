@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // `pnpm local:up [--ui]`: levanta todo el entorno local de punta a punta (SPEC §10.1). Idempotente.
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { applyInfra, buildLambdas, migrate, writeWebConfig } from "./deploy-steps.mjs";
-import { compose, info, loadEnv, node, ROOT, run, step, TF_DIR, waitForFloci } from "./lib.mjs";
+import { compose, info, loadEnv, node, removeTerraformFiles, ROOT, run, step, TF_DIR, waitForFloci } from "./lib.mjs";
 import { seed } from "./seed.mjs";
 
 const withUi = process.argv.includes("--ui");
@@ -24,7 +24,7 @@ const startedAt = run("docker", ["inspect", "-f", "{{.State.StartedAt}}", contai
 const marker = join(ROOT, TF_DIR, ".floci-started-at");
 const previous = existsSync(marker) ? readFileSync(marker, "utf8").trim() : null;
 if (previous !== startedAt) {
-  for (const f of ["terraform.tfstate", "terraform.tfstate.backup"]) rmSync(join(ROOT, TF_DIR, f), { force: true });
+  removeTerraformFiles([`${TF_DIR}/terraform.tfstate`, `${TF_DIR}/terraform.tfstate.backup`]);
   if (previous) info("Floci se reinició: se descartó el state local de Terraform");
   writeFileSync(marker, `${startedAt}\n`);
 }
