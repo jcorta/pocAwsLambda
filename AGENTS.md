@@ -26,7 +26,8 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 - Hecho: la fase F0 (spike de Floci en `spikes/f0-floci/`), verificada en Windows y en el runner de GitHub (workflow `spike-f0`).
 - Hecho: F1, la base del monorepo (pnpm, TypeScript, lint, tests, `doctor`, compose, hook de gitleaks y CI).
 - Hecho: F2, dominio y base de datos (esquema, migraciones, dominio, repositorios y servicios de `services/api`).
-- Próximo: F3, API e infraestructura (handlers, Lambdas, Terraform en Floci y E2E).
+- Hecho: F3, API e infraestructura (12 rutas, 5 Lambdas, Terraform en Floci, `local:up` y E2E en la CI).
+- Próximo: F4, notificaciones (SQS, notifier y SES).
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)
