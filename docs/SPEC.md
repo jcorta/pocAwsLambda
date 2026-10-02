@@ -468,8 +468,10 @@ En AWS real `cognito.endpoint` se omite, y el SDK usa el endpoint de AWS.
 | `/confirm?email=` | Pública | Código de verificación y botón para reenviarlo |
 | `/` | Autenticado | Redirige a `/resources` |
 | `/resources` | Autenticado | Tarjetas de recursos activos: nombre, descripción, atributos, duración de turno |
-| `/resources/view?id=` | Autenticado | Detalle del recurso, selector de fecha (de hoy al horizonte) y grilla de turnos con sus estados (disponible, ocupado, mío, pasado). Clic en un turno disponible → modal de confirmación → reservar |
-| `/bookings` | Autenticado | Mis reservas, en pestañas "Próximas" y "Pasadas". Botón "Cancelar" deshabilitado, con explicación, si se cerró la ventana de cancelación |
+| `/resources/view?id=` | Autenticado | Detalle del recurso, selector de fecha (desde hoy) y grilla de turnos con sus estados (disponible, ocupado, mío, pasado). Clic en un turno disponible → confirmación → reservar. Si la fecha queda fuera del horizonte, se muestra el rango permitido que trae `DATE_OUT_OF_RANGE` en `details` |
+| `/bookings` | Autenticado | Mis reservas, en pestañas "Próximas" y "Pasadas", con "Cargar más". El botón "Cancelar" solo aparece en las reservas confirmadas que todavía no empezaron. Si se cerró la ventana de cancelación, la API responde `CANCELLATION_WINDOW_CLOSED` y la UI explica la anticipación mínima (`details.minHours`) |
+
+> **Por qué el frontend no conoce la configuración:** `GET /v1/admin/settings` es solo para admins, así que para un usuario el horizonte y la anticipación mínima se informan a partir de los `details` de los errores (decisión de F5).
 | `/admin/resources` | Admin | Tabla de recursos, incluidos los inactivos, con acciones crear, editar y activar o desactivar |
 | `/admin/resources/edit?id=` | Admin | Formulario de recurso, con grilla de horario semanal. Sin `id`, crea un recurso nuevo |
 | `/admin/bookings` | Admin | Tabla filtrable (recurso, fechas, estado, email) con paginación y acción de cancelar |
