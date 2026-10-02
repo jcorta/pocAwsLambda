@@ -23,7 +23,7 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 3. Nunca queda código que contradiga la spec, ni una spec desactualizada respecto del código.
 
 ## Estado actual
-- Hecho: la fase F0 (spike de Floci en `spikes/f0-floci/`). Falta ejecutarlo en el runner de GitHub.
+- Hecho: la fase F0 (spike de Floci en `spikes/f0-floci/`), verificada en Windows y en el runner de GitHub (workflow `spike-f0`).
 - Próximo: F1, la base del monorepo.
 - Todavía no existe el monorepo. La estructura prevista está en SPEC §1.5 y §6.5:
   ```

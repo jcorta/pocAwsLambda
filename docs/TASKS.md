@@ -3,11 +3,11 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ◐ · F1 ☐ · F2 ☐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ☐ · F2 ☐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
-## [ ] F0 — Spike de viabilidad en Floci
+## [x] F0 — Spike de viabilidad en Floci
 > Terminado cuando: los 7 puntos de §7.6 están verificados en Windows **y** en el runner de GitHub.
 
 - [x] `docker-compose.yml` con Floci 2.1.0 y Terraform en contenedor
@@ -15,7 +15,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] `verify.mjs`: 29/29 chequeos OK en Windows
 - [x] Informe `docs/spikes/floci.md` y hallazgos A1 a A7 incorporados a la spec
 - [x] Repo privado en GitHub con `main` sincronizada
-- [ ] Workflow que ejecuta el spike en `ubuntu-latest` y verificarlo en verde
+- [x] Workflow que ejecuta el spike en `ubuntu-latest` y verificarlo en verde (29/29, [run 37043661160](https://github.com/jcorta/pocAwsLambda/actions/runs/37043661160))
 
 ## [ ] F1 — Base del monorepo
 > Terminado cuando: `npm run doctor` y `pnpm test` pasan, y la CI corre en los PR.
