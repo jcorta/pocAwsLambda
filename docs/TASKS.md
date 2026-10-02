@@ -28,7 +28,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] `scripts/doctor.mjs` y `npm run doctor` (§10)
 - [x] `docker-compose.yml` definitivo: Floci con la configuración A1, perfil `ui` (Floci UI) y Terraform en contenedor
 - [x] `.env.example` y `.terraform-version`
-- [ ] Hook de pre-commit con `gitleaks`
+- [x] Hook de pre-commit con `gitleaks`
 - [ ] `ci.yml` con los jobs `changes`, `lint` (con `gitleaks`) y `unit`
 - [ ] Primer PR con la CI en verde
 
