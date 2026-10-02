@@ -264,7 +264,7 @@ Dentro de **una** transacción:
 
 ### 3.4 Datos semilla (entorno local y CI)
 - Usuario admin en Cognito (`admin@example.com`, en el grupo `admin`) y un usuario de prueba (`user@example.com`).
-- Fila de `settings` con los valores por defecto.
+- La fila de `settings` **no** la crea el seed: la inserta la migración inicial con los valores por defecto, para que exista en todos los entornos, incluido AWS real, donde el seed no corre (§10.2).
 - 3 recursos de ejemplo con horarios de lunes a viernes, de 08:00 a 20:00, con turnos de 30, 60 y 120 minutos.
 
 ### 3.5 Migraciones
@@ -901,7 +901,7 @@ Decisiones de base:
   - `admin@example.com`, en el grupo `admin`.
   - `user@example.com`.
 - Las contraseñas vienen de `.env.local`. En el repo se versiona `.env.example`, con valores por defecto aptos solo para local.
-- En la base: la fila de `settings` y 3 recursos de ejemplo (§3.4).
+- En la base: 3 recursos de ejemplo (§3.4). La fila de `settings` ya la creó la migración.
 - El seed solo existe para `local` y CI. Nunca se ejecuta en `envs/aws`.
 
 ### 10.3 Puertos

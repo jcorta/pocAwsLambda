@@ -1,5 +1,5 @@
-# CI de cada PR y de main (SPEC §9.1). Por ahora: changes, lint y unit.
-# Los jobs integration, infra-test, build y e2e-local se agregan en F2 a F6.
+# CI de cada PR y de main (SPEC §9.1). Por ahora: changes, lint, integration y unit.
+# Los jobs infra-test, build y e2e-local se agregan en F3 a F6.
 name: ci
 
 on:
@@ -78,6 +78,26 @@ jobs:
           else
             node scripts/gitleaks.mjs --range "$RANGE"
           fi
+
+  # Tests contra Postgres 16 real con Testcontainers (Docker viene en el runner)
+  integration:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:integration
 
   unit:
     runs-on: ubuntu-latest

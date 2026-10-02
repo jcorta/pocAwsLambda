@@ -49,6 +49,8 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm lint` | ESLint en todo el repo |
 | `pnpm format` / `pnpm format:check` | Formatea con Prettier, o solo verifica el formato |
 | `pnpm test` | Tests unitarios (Vitest) de cada paquete |
+| `pnpm test:integration` | Tests de integración contra Postgres 16 real (Testcontainers). **Requiere Docker** |
+| `pnpm --filter @reservas/api db:generate` | Genera una migración SQL a partir de los cambios en `src/infra/db/schema.ts`. Lo que Drizzle no expresa (exclusion constraints, extensiones, datos) va en una migración manual (`drizzle-kit generate --custom`) |
 | `pnpm secrets:staged` / `pnpm secrets:history` | gitleaks (en Docker) sobre lo que está por commitearse, o sobre todo el historial |
 
 - El resto de los comandos (`npm run doctor`, `pnpm local:up`, etc.) están definidos en SPEC §10.1 y se agregan a esta tabla a medida que existan.
@@ -63,7 +65,13 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - **Un job nuevo que sea pesado** (integración, build, E2E) se condiciona con `if: needs.changes.outputs.code == 'true'`, así se saltea en los PRs que solo tocan documentación sin quedar pendiente.
 - **Antes de pedir un merge**, la CI del PR tiene que estar en verde. Se sigue con `gh pr checks <n> --watch`.
 - **Hook de pre-commit (Lefthook):** `pnpm install` lo instala con el script `prepare`; si no quedó instalado, se corre `pnpm run prepare`. Ejecuta gitleaks sobre lo que está por commitearse, así que **commitear requiere Docker corriendo**. Si Docker no está disponible, el hook falla y bloquea el commit: es intencional.
-- **pnpm bloquea los scripts de instalación de las dependencias.** Cada excepción se declara en `allowBuilds` (`pnpm-workspace.yaml`) y requiere aprobación. Por ahora la única entrada es `lefthook: false`: su script no hace falta, porque los hooks los instala `prepare`.
+- **pnpm bloquea los scripts de instalación de las dependencias.** Cada excepción se declara en `allowBuilds` (`pnpm-workspace.yaml`) y requiere aprobación. Por ahora todas las entradas son `false`, es decir, no se ejecutan:
+  - `lefthook`: los hooks los instala `prepare`.
+  - `esbuild`: el binario llega como dependencia opcional por plataforma.
+  - `ssh2` y `cpu-features`: conexión a Docker por SSH, que no se usa (Testcontainers usa el socket local).
+  - `protobufjs`.
+
+  Si una herramienta falla porque le falta su script de instalación, se consulta antes de habilitarlo.
 - **pnpm aplica `minimumReleaseAge`:** rechaza versiones publicadas hace muy poco, como protección contra la cadena de suministro. Si una instalación falla por eso, se usa una versión anterior. **No** se agregan excepciones (`minimumReleaseAgeExclude`) sin aprobación.
 
 ## Convenciones
@@ -79,6 +87,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - Alcances habituales: `api`, `web`, `shared`, `infra`, `ci`, `docs` y `spike`.
 
 ### Código
+- **Migraciones:** solo hacia adelante. Nunca se edita una migración ya mergeada; los cambios van en una migración nueva.
 - **El dominio es puro.** `services/api/src/domain` no importa AWS, la base de datos ni el reloj del sistema: `now` y `timezone` se reciben como parámetros.
 - **Las fechas se calculan con una librería que entienda zonas horarias**, nunca con offsets fijos. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
 - **Las reglas de concurrencia viven en la base de datos**: exclusion constraint y `FOR UPDATE` (SPEC §3.3). No reemplazarlas por chequeos en código.

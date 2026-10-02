@@ -3,4 +3,8 @@ packages:
   - services/*
   - packages/*
 allowBuilds:
+  cpu-features: false
+  esbuild: false
   lefthook: false
+  protobufjs: false
+  ssh2: false
