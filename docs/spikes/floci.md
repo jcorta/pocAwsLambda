@@ -6,7 +6,7 @@
   - Windows 11 con Docker Desktop 29.8.1 (WSL2) y Compose v5.5.1.
   - Floci `floci/floci:2.1.0`, Terraform 1.16.4 (contenedor), provider AWS 6.67.0 y Node 24 en el host.
   - Runtime de las Lambdas: `nodejs22.x`.
-- **Resultado:** **29/29 chequeos OK**. La arquitectura de la spec es viable en Floci, con los ajustes que se listan más abajo.
+- **Resultado:** **29/29 chequeos OK** en Windows y en el runner de GitHub (`ubuntu-latest`). La arquitectura de la spec es viable en Floci, con los ajustes que se listan más abajo.
 
 ## Cómo reproducirlo
 ```powershell
@@ -55,5 +55,7 @@ docker compose down   # limpia todo: Floci es efímero
 | **A6** | Las URLs `*.localhost.floci.io` dependen de un DNS público que resuelve a `127.0.0.1`. Sin conexión a Internet, la API y el sitio no resuelven desde el host | §11.3 |
 | **A7** | Crear la instancia RDS tarda unos 90 s: es el paso más lento de `local:up` y del job `e2e-local` | §9.1 y §10.1 |
 
-## Pendiente
-- **Ejecutarlo en el runner de GitHub Actions** (`ubuntu-latest`), que es parte de la definición de terminado de F0. Queda para cuando exista el repo en GitHub. Se hace como primer workflow de F1.
+## Ejecución en GitHub Actions
+- **29/29 chequeos OK en `ubuntu-latest`** el 2026-10-02, en 2 min 57 s ([run 37043661160](https://github.com/jcorta/pocAwsLambda/actions/runs/37043661160)), con el workflow `.github/workflows/spike-f0.yml`.
+- Se comportó igual que en Windows, sin cambios de configuración: la arquitectura es la misma en los dos sistemas.
+- **Aviso de GitHub:** `ubuntu-latest` pasa a Ubuntu 26 desde el 19 de octubre de 2026. Si algo se rompe después de esa fecha, la primera sospecha es el cambio de imagen. Se puede fijar `ubuntu-24.04` temporalmente.
