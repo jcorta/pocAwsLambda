@@ -8,5 +8,12 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // Scripts de Node sin bundler (doctor, scripts del entorno local)
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly", fetch: "readonly", AbortSignal: "readonly" },
+    },
+  },
   prettier,
 );

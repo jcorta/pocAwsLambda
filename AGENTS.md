@@ -39,7 +39,11 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 
 | Comando | Qué hace |
 |---|---|
+| `npm run doctor` | Verifica los prerequisitos (Node, pnpm, Docker, Compose, socket de Docker, puertos y versión de Terraform). Termina con un código distinto de 0 si falta algo obligatorio |
 | `pnpm install` | Instala las dependencias del monorepo |
+| `docker compose up -d floci` | Levanta Floci. Con `--profile ui` suma Floci UI (`:4500`), que incluye la bandeja de emails de SES |
+| `docker compose --profile ui down -v` | Baja el entorno y borra el volumen de datos de Floci (es efímero) |
+| `docker compose run --rm terraform <args>` | Terraform en contenedor (perfil `tools`), con la versión de `.terraform-version` |
 | `pnpm typecheck` | `tsc --noEmit` en cada paquete |
 | `pnpm lint` | ESLint en todo el repo |
 | `pnpm format` / `pnpm format:check` | Formatea con Prettier, o solo verifica el formato |

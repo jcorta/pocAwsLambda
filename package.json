@@ -7,6 +7,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "doctor": "node scripts/doctor.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
