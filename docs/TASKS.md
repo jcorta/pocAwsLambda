@@ -54,12 +54,12 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Lambdas `me`, `resources`, `bookings` y `admin`
 - [x] Lambda `migrator`
 - [x] Build con esbuild a `dist/lambdas/<nombre>/` (el zip lo arma Terraform con `archive_file`), con smoke test de los bundles
-- [ ] Módulos de Terraform `network`, `database`, `auth` y `api`
-- [ ] Root `infra/envs/local`: provider de Floci, `api_url` y `cognito_issuer_url`
+- [x] Módulos de Terraform `network`, `database`, `auth` y `api` (61 recursos aplicados en Floci)
+- [x] Root `infra/envs/local`: provider de Floci, `api_url` y `cognito_issuer_url`
 - [ ] Seed: usuarios de Cognito, `settings` y recursos de ejemplo
 - [ ] Comandos `local:up`, `deploy:local`, `local:logs`, `local:down` y `local:reset`
 - [x] Tests unitarios de handlers (más 19 tests de integración de la pila completa, que validan las respuestas contra el contrato)
-- [ ] Test de consistencia entre las rutas de Terraform y los handlers
+- [x] Test de consistencia entre las rutas de Terraform y los handlers
 - [ ] E2E de la API: auth, reservas, límites y cancelación
 - [ ] Jobs `build` y `e2e-local` en la CI
 
@@ -93,6 +93,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [ ] `terraform test` con las aserciones de §8.2 y `tflint` (job `infra-test`)
 - [ ] Umbrales de cobertura aplicados en la CI (§8.4)
 - [ ] `infra/envs/aws` e `infra/bootstrap` completos, sin aplicar
+- [ ] Access logs del stage `$default` de API Gateway (SPEC §7.4), verificando que Floci los acepte
 - [ ] `deploy-aws.yml` preparado y deshabilitado
 - [ ] README con guía de inicio, verificada en una máquina limpia
 - [ ] Checklist para hacer público el repo (§9.3)
@@ -100,7 +101,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 ## [ ] F7 — Migración a AWS real *(opcional)*
 > Terminado cuando: los smoke tests están en verde en AWS real.
 
-- [ ] Decidir D-3.1 (NAT o VPC endpoints)
+- [ ] Decidir D-3.1 (NAT o VPC endpoints) e implementarlo en el módulo `network` (hoy solo admite `network_egress = "none"`)
 - [ ] Aplicar `infra/bootstrap` (bucket del state y rol OIDC)
 - [ ] SES: dominio verificado, salida del sandbox y Cognito enviando por SES
 - [ ] Primer deploy manual, migrator y web

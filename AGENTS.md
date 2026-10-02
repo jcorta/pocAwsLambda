@@ -46,6 +46,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `docker compose up -d floci` | Levanta Floci. Con `--profile ui` suma Floci UI (`:4500`), que incluye la bandeja de emails de SES |
 | `docker compose --profile ui down -v` | Baja el entorno y borra el volumen de datos de Floci (es efímero) |
 | `docker compose run --rm terraform <args>` | Terraform en contenedor (perfil `tools`), con la versión de `.terraform-version` |
+| `docker compose run --rm terraform -chdir=infra/envs/local apply` | Aplica la infra en Floci, con Floci levantado y después de `pnpm build`. Tarda unos 2 minutos la primera vez (RDS) |
 | `pnpm typecheck` | `tsc --noEmit` en cada paquete |
 | `pnpm lint` | ESLint en todo el repo |
 | `pnpm format` / `pnpm format:check` | Formatea con Prettier, o solo verifica el formato |
@@ -90,6 +91,11 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - Alcances habituales: `api`, `web`, `shared`, `infra`, `ci`, `docs` y `spike`.
 
 ### Código
+- **Terraform:**
+  - Los módulos (`infra/modules/*`) no saben en qué entorno corren; las diferencias van en `infra/envs/*`.
+  - Las rutas de la API se declaran en `infra/modules/api/routes.tf.json`. Una ruta nueva va **ahí y** en `handlers/routes/<lambda>.ts`; el test `routes.test.ts` falla si no coinciden.
+  - El lockfile de providers (`.terraform.lock.hcl`) se versiona.
+- **Floci deja volúmenes propios** (los de RDS, con la etiqueta `floci=true`) que `docker compose down -v` no borra. Se limpian con `docker volume rm` sobre `docker volume ls -q --filter label=floci=true`.
 - **Migraciones:** solo hacia adelante. Nunca se edita una migración ya mergeada; los cambios van en una migración nueva.
 - **El dominio es puro.** `services/api/src/domain` no importa AWS, la base de datos ni el reloj del sistema: `now` y `timezone` se reciben como parámetros.
 - **Las fechas se calculan con Temporal** (`temporal-polyfill`), nunca con `Date` ni con offsets fijos. Los turnos se generan en tiempo absoluto (regla de los días de cambio de hora en SPEC §2.2).
