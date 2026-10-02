@@ -1,0 +1,37 @@
+# Spike F0: Floci mínimo para validar los puntos de integración de docs/SPEC.md §7.6
+name: f0-floci
+
+services:
+  floci:
+    image: floci/floci:2.1.0
+    container_name: floci
+    ports:
+      - "4566:4566"
+      - "7001-7010:7001-7010" # proxy de RDS (acceso desde el host)
+    environment:
+      # Lambdas y RDS se levantan como contenedores hermanos en esta red
+      FLOCI_SERVICES_DOCKER_NETWORK: floci-net
+      # Host que devuelve RDS en Endpoint.Address: el nombre del contenedor, alcanzable desde las Lambdas
+      FLOCI_SERVICES_RDS_ENDPOINT_HOST: floci
+      # Permite que el JWT authorizer use un emisor http://localhost (Cognito de Floci)
+      FLOCI_SECURITY_ALLOW_PRIVATE_JWT_TARGETS: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - floci-net
+
+  # Terraform en contenedor (sin instalarlo en la máquina)
+  terraform:
+    image: hashicorp/terraform:1.16.4
+    profiles: ["tools"]
+    working_dir: /work/terraform
+    volumes:
+      - ./:/work
+    environment:
+      TF_VAR_floci_endpoint: http://floci:4566
+    networks:
+      - floci-net
+
+networks:
+  floci-net:
+    name: floci-net

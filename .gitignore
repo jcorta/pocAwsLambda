@@ -35,6 +35,10 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
+# Artefactos del spike F0
+spikes/f0-floci/outputs.json
+spikes/f0-floci/terraform/.build/
+
 # Logs
 *.log
 npm-debug.log*

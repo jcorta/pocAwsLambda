@@ -1,6 +1,6 @@
 # Especificación — Sistema de reservas de recursos (POC AWS Lambda)
 
-> Estado: **Especificación v1 completa** (secciones 1–13). Única decisión diferida: D-3.1 (red en AWS real, se decide en F7).
+> Estado: **Especificación v1 completa** (secciones 1–13), ajustada con los resultados del spike F0 ([`docs/spikes/floci.md`](spikes/floci.md)). Única decisión diferida: D-3.1 (red en AWS real, se decide en F7).
 > Documento de idea de origen: decisiones técnicas cerradas (ver §1.5).
 
 ---
@@ -286,6 +286,7 @@ Dentro de **una** transacción:
 - **Base:** `{API_URL}/v1`. API Gateway v2 (HTTP API), stage `$default`.
 - **Formato:** JSON (`Content-Type: application/json`), propiedades en `camelCase`.
 - **Autenticación:** todos los endpoints requieren `Authorization: Bearer <ID token>` de Cognito (decisión D-2.1). El JWT authorizer de API Gateway valida firma (JWKS), emisor (`iss`), audiencia (`aud` = clientId del app client) y vencimiento. Si algo falla, responde `401` sin invocar la Lambda.
+  - **El authorizer también deja pasar el access token**, en AWS y en Floci (hallazgo A3 del spike F0). Cuando el token no trae `aud`, compara `client_id` con la audiencia. Por eso **la Lambda rechaza con `401 INVALID_TOKEN_TYPE`** cualquier token cuyo claim `token_use` no sea `id`.
 - **Autorización por rol:** la hace la Lambda leyendo el claim `cognito:groups`. Las rutas `/v1/admin/*` exigen el grupo `admin`; si falta, responden `403 FORBIDDEN`.
 - **Fechas:**
   - Los instantes se devuelven en ISO 8601 **con el offset** de `APP_TIMEZONE`, por ejemplo `2026-10-05T08:00:00-03:00`, y se aceptan con cualquier offset válido.
@@ -318,6 +319,7 @@ Dentro de **una** transacción:
 | 400 | `INVALID_SLOT` | El inicio no coincide con un turno válido (RN-02) |
 | 400 | `DATE_OUT_OF_RANGE` | La fecha está en el pasado o fuera del horizonte (RN-03) |
 | 401 | — (lo responde API Gateway) | Falta el token, o es inválido o está vencido |
+| 401 | `INVALID_TOKEN_TYPE` | El token es válido pero no es un ID token (`token_use` ≠ `id`). Lo responde la Lambda |
 | 403 | `FORBIDDEN` | Un `user` llama a una ruta `/admin` |
 | 404 | `RESOURCE_NOT_FOUND` | El recurso no existe, o está inactivo y quien consulta no es admin. Al reservar, un recurso inactivo responde este código a todos, incluido el admin |
 | 404 | `BOOKING_NOT_FOUND` | La reserva no existe, o es de otro usuario y quien consulta no es admin |
@@ -510,9 +512,10 @@ En AWS real `cognito.endpoint` se omite, y el SDK usa el endpoint de AWS.
 1. El frontend llama a `InitiateAuth` (`USER_PASSWORD_AUTH`) en Cognito y recibe el ID token, el access token y el refresh token.
 2. Cada request a la API lleva `Authorization: Bearer <ID token>`.
 3. El JWT authorizer de API Gateway valida firma, `iss`, audiencia y `exp`. Si falla, responde `401`.
-4. La Lambda lee los claims en `event.requestContext.authorizer.jwt.claims`: `sub`, `email` y `cognito:groups`.
-   > **Detalle conocido:** en HTTP API, los claims de tipo lista suelen llegar como string (por ejemplo `"[admin]"`). El parser de roles debe aceptar tanto un array como un string. Hay un test unitario para esto.
-5. La Lambda hace la autorización por rol y aplica las reglas.
+4. La Lambda lee los claims en `event.requestContext.authorizer.jwt.claims`: `sub`, `email`, `cognito:groups` y `token_use`.
+   > **Verificado en el spike F0:** en el token, `cognito:groups` es un array (`["admin"]`), pero en `requestContext` llega como string (`"[admin]"`). El parser de roles acepta las dos formas, y hay un test unitario para esto.
+5. Si `token_use` no es `id`, la Lambda responde `401 INVALID_TOKEN_TYPE` (hallazgo A3).
+6. La Lambda hace la autorización por rol y aplica las reglas.
 
 ### 6.3 Flujo de una reserva
 1. `POST /v1/bookings` llega a la Lambda de reservas.
@@ -559,7 +562,9 @@ packages/shared/   Esquemas Zod, tipos y códigos de error compartidos con el fr
 ```
 - **Conexión a la DB:** un `pg.Pool` con `max: 1`, creado fuera del handler para reutilizarlo entre invocaciones en caliente. `statement_timeout` de 5 s. Las credenciales se leen de Secrets Manager en el arranque en frío y quedan en cache. En AWS real, RDS Proxy queda como mejora (§11).
 - **Empaquetado:** `esbuild` genera un bundle por Lambda (un zip). Runtime Node.js 22. Arquitectura configurable por variable (`x86_64` por defecto, por compatibilidad local).
-- **Configuración:** por variables de entorno que define Terraform: `APP_TIMEZONE`, `DB_SECRET_ARN`, `NOTIFICATIONS_QUEUE_URL`, `SES_FROM` y, solo en local, `lambda_extra_env` (§7.3). CORS no es una variable de las Lambdas: lo resuelve API Gateway (§4.1).
+- **Configuración:** por variables de entorno que define Terraform: `APP_TIMEZONE`, `DB_SECRET_ARN`, `NOTIFICATIONS_QUEUE_URL` y `SES_FROM`. CORS no es una variable de las Lambdas: lo resuelve API Gateway (§4.1).
+- **Clientes de AWS:** se crean sin endpoint explícito. En Floci, el SDK toma `AWS_ENDPOINT_URL`, que Floci inyecta en cada Lambda; en AWS, usa los endpoints estándar.
+  - **SQS:** el cliente se crea con `useQueueUrlAsEndpoint: false` (hallazgo A2). Si no, el SDK envía al host de la `QueueUrl` (`localhost:4566`), que dentro del contenedor de la Lambda no es Floci. En AWS no cambia nada.
 - **Logs:** JSON estructurado (Powertools for AWS Lambda: Logger), con `requestId`, `userId`, ruta y duración. Nunca se registran tokens ni contraseñas.
 
 ### 6.6 Límites de las Lambdas (valores iniciales)
@@ -655,9 +660,9 @@ provider "aws" {
 | `db_instance_class` | `db.t4g.micro` (Floci lo ignora) | `db.t4g.micro` |
 | `db_deletion_protection`, `db_backup_retention_days` | `false`, `0` | `true`, `7` |
 | `lambda_architecture` | `x86_64` | `arm64` (más barato) |
-| `lambda_extra_env` | `AWS_ENDPOINT_URL` apuntando a Floci (ver §7.6) | `{}` |
-| `cognito_issuer_url` | La URL de emisor que Floci pone en los tokens (a verificar en F0) | `https://cognito-idp.<region>.amazonaws.com/<poolId>` |
-| `cors_origins` | `http://localhost:3000` y la URL del bucket en Floci | Dominio de CloudFront |
+| `cognito_issuer_url` | `http://localhost:4566/<poolId>` (verificado en F0) | `https://cognito-idp.<region>.amazonaws.com/<poolId>` |
+| `api_url` (lo calcula el root) | `http://<apiId>.execute-api.localhost.floci.io:4566`. En Floci, `api_endpoint` devuelve una URL con formato de AWS que no sirve (hallazgo A5) | `aws_apigatewayv2_api.api_endpoint` |
+| `cors_origins` | `http://localhost:3000` y `http://<bucket>.s3-website.localhost.floci.io:4566` | Dominio de CloudFront |
 | `ses_from` | `no-reply@example.com` (Floci verifica al instante) | Remitente del dominio verificado |
 | `network_egress` | `none` | Decisión D-3.1 |
 
@@ -697,8 +702,10 @@ provider "aws" {
 
 Los scripts de deploy, seed y tests leen estos valores con `terraform output -json`. Nunca se hardcodean.
 
-### 7.6 Puntos de integración Floci a verificar (spike F0)
-Son los puntos donde la "transparencia" puede romperse. Se validan antes de construir todo lo demás:
+### 7.6 Puntos de integración con Floci (spike F0)
+> **Estado: los 7 verificados ✔** el 2026-10-02 con Floci 2.1.0. Los resultados, los hallazgos A1 a A7 y cómo reproducir el spike están en [`docs/spikes/floci.md`](spikes/floci.md).
+
+Son los puntos donde la "transparencia" puede romperse:
 1. **Emisor de los tokens de Cognito en Floci**: qué `iss` ponen y si el JWT authorizer de Floci los valida con la JWKS local.
 2. **Cómo llega la Lambda a otros servicios de Floci**: dentro del contenedor de la Lambda, `localhost` no es Floci. Hay que confirmar si Floci inyecta `AWS_ENDPOINT_URL` o si se define con `lambda_extra_env`.
 3. **Cómo llega la Lambda al Postgres de RDS**: confirmar que el host y puerto que devuelve `aws_db_instance.address` en Floci son alcanzables **desde el contenedor de la Lambda**.
@@ -755,7 +762,7 @@ Son los puntos donde la "transparencia" puede romperse. Se validan antes de cons
 - Con `enable_cloudfront = false` no se crea ninguna distribución.
 
 **E2E API:**
-- `401` sin token. `403` cuando un `user` llama a `/admin`.
+- `401` sin token. `401 INVALID_TOKEN_TYPE` con el access token en lugar del ID token. `403` cuando un `user` llama a `/admin`.
 - Flujo feliz: el admin crea un recurso, el usuario consulta la disponibilidad, reserva y aparece en `GET /bookings/me`, y llega el email de confirmación a `/_aws/ses` (con espera de hasta 15 s).
 - `SLOT_TAKEN` desde dos usuarios distintos y `BOOKING_LIMIT_REACHED`.
 - Cancelación del usuario, con email, y cancelación por el admin.
@@ -848,6 +855,16 @@ Se dispara en cada pull request y en cada push a `main`. Usa `concurrency` para 
 ## 10. Entorno local
 Decisiones de base:
 - **Floci va embebido** en el `docker-compose.yml` del repo, no se instala aparte. Se monta el socket de Docker (`/var/run/docker.sock`) para que Floci levante como contenedores hermanos el Postgres de RDS y las Lambdas. En Windows requiere Docker Desktop con WSL2.
+  - **Imagen con versión fija:** `floci/floci:2.1.0`, la versión validada en F0.
+  - **Configuración obligatoria** (hallazgo A1). Sin estas variables no funcionan la conexión de las Lambdas a RDS ni el JWT authorizer:
+
+    | Variable | Valor | Para qué |
+    |---|---|---|
+    | `FLOCI_SERVICES_DOCKER_NETWORK` | `floci-net` (red del compose con `name:` fijo) | Lambdas y RDS se levantan en la misma red que Floci |
+    | `FLOCI_SERVICES_RDS_ENDPOINT_HOST` | `floci` (nombre del contenedor) | RDS devuelve un host que las Lambdas pueden resolver |
+    | `FLOCI_SECURITY_ALLOW_PRIVATE_JWT_TARGETS` | `true` | El JWT authorizer acepta el emisor `http://localhost:4566/...` de Cognito |
+
+  - **Puertos publicados:** `4566` y el rango `7001-7010` del proxy de RDS, para conectarse desde el host (por ejemplo con `psql` o un cliente gráfico) por `localhost:7001`.
 - **Terraform corre en un contenedor** con versión fija, así no hace falta instalarlo en la máquina.
 - **Prerequisitos:** Docker Desktop (con Compose v2) y Node.js LTS. pnpm se habilita con `corepack enable`, que viene con Node. La AWS CLI es opcional.
 - **Comando de verificación de prerequisitos: `npm run doctor`.** Usa npm, que viene con Node, para que funcione antes de tener pnpm. Es un script en Node (`scripts/doctor.mjs`) y funciona en Windows, macOS y Linux.
@@ -857,7 +874,7 @@ Decisiones de base:
     - Docker instalado y el daemon corriendo (`docker info`).
     - Docker Compose v2 (`docker compose version`).
     - Acceso al socket de Docker desde un contenedor: lanza un contenedor efímero que monta `/var/run/docker.sock` y ejecuta `docker version`.
-    - Puertos libres: 4566 (Floci), 3000 (web en desarrollo).
+    - Puertos libres: 4566 (Floci), 7001-7010 (RDS) y 3000 (web en desarrollo).
   - **Chequeos opcionales** (solo advertencias): puertos 4500 (Floci UI), 8025 y 1025 (Mailpit), AWS CLI instalada, y al menos 4 GB de memoria asignados a Docker.
   - **Salida:** una línea por chequeo con ✔, ⚠ o ✖. Cada falla incluye una sugerencia concreta para resolverla (qué instalar o qué proceso ocupa el puerto).
   - El comando que levanta el entorno (por ejemplo `pnpm local:up`) ejecuta `doctor` antes de arrancar y se detiene si falla algún chequeo obligatorio.
@@ -870,7 +887,7 @@ Decisiones de base:
 |---|---|
 | `npm run doctor` | Verifica los prerequisitos (ver arriba) |
 | `pnpm install` | Instala las dependencias del monorepo |
-| `pnpm local:up [--ui] [--mail]` | `doctor`, levanta Floci (y opcionalmente Floci UI y Mailpit), construye, ejecuta `terraform apply` en `envs/local`, migra, carga el seed y genera `apps/web/public/config.json`. Al final imprime las URLs y las credenciales de prueba. Es idempotente: se puede volver a correr |
+| `pnpm local:up [--ui] [--mail]` | `doctor`, levanta Floci (y opcionalmente Floci UI y Mailpit), construye, ejecuta `terraform apply` en `envs/local`, migra, carga el seed y genera `apps/web/public/config.json`. Al final imprime las URLs y las credenciales de prueba. Es idempotente: se puede volver a correr. La primera vez tarda unos 2 minutos, porque crear la instancia RDS lleva unos 90 s (hallazgo A7) |
 | `pnpm dev` | Levanta `next dev` en `:3000` contra la API de Floci, con recarga en caliente del frontend |
 | `pnpm deploy:local` | Reconstruye las Lambdas y aplica Terraform. Es el ciclo rápido después de cambiar el código del backend |
 | `pnpm deploy:web:local` | Construye el export estático y lo sube al bucket de Floci |
@@ -895,7 +912,7 @@ Decisiones de base:
 | 3000 | `next dev` |
 | 4500 | Floci UI (opcional) |
 | 8025 / 1025 | Mailpit, interfaz web y SMTP (opcional) |
-| Dinámico | Postgres de RDS que levanta Floci (se informa al final de `local:up`) |
+| 7001–7010 | Proxy de RDS de Floci. La primera instancia usa el 7001 |
 
 ---
 
@@ -931,7 +948,8 @@ La red es el costo dominante. Por eso conviene desmontar el entorno cuando no se
 |---|---|---|
 | Floci se comporta distinto que AWS: no aplica IAM ni la red | Errores que solo aparecen en AWS | Tests de infra sobre el plan (§8.2) y smoke test en AWS al migrar |
 | Puntos de integración de §7.6 (emisor de tokens, endpoints dentro de la Lambda, host de RDS) | Bloquea el entorno local | **Spike F0** antes de construir nada más |
-| Floci es un proyecto joven | Bugs o cambios que rompen | Imagen con versión fija, actualización deliberada y reporte de issues |
+| Floci es un proyecto joven | Bugs o cambios que rompen | Imagen con versión fija (2.1.0), actualización deliberada que vuelve a correr el spike F0, y reporte de issues |
+| Las URLs `*.localhost.floci.io` dependen de un DNS público que resuelve a `127.0.0.1` (hallazgo A6) | Sin conexión a Internet, la API y el sitio no resuelven desde el host | Documentado en el README. Alternativa sin conexión: una entrada en el archivo `hosts` para el `apiId` |
 | Agotar las conexiones de Postgres con muchas Lambdas en paralelo | Errores 5xx con carga | `max: 1` por instancia y concurrencia reservada acotada. RDS Proxy en AWS |
 | Arranques en frío de Lambdas en VPC | Latencia en el primer request | Aceptado en el POC. Bundles chicos con esbuild |
 | SES sandbox y entregabilidad | Los emails no llegan en AWS | Pasos de §11.1.3 |
@@ -944,7 +962,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 
 | Fase | Contenido | Definición de terminado |
 |---|---|---|
-| **F0 Spike de viabilidad en Floci** | docker compose con Floci. Terraform mínimo: Cognito, HTTP API con JWT authorizer, una Lambda Node 22 que consulta RDS (`SELECT 1`), publica en SQS y envía por SES, y un bucket S3 con website | Los 7 puntos de §7.6 verificados en Windows y en el runner de GitHub. Resultados en `docs/spikes/floci.md` y la spec ajustada si algo no funciona |
+| **F0 Spike de viabilidad en Floci** ✔ *(en Windows; falta ejecutarlo en el runner de GitHub, al inicio de F1)* | docker compose con Floci. Terraform mínimo: Cognito, HTTP API con JWT authorizer, una Lambda Node 22 que consulta RDS (`SELECT 1`), publica en SQS y envía por SES, y un bucket S3 con website | Los 7 puntos de §7.6 verificados en Windows y en el runner de GitHub. Resultados en `docs/spikes/floci.md` y la spec ajustada si algo no funciona |
 | **F1 Base del monorepo** | Workspaces de pnpm, TS, ESLint y Prettier, Vitest, `doctor`, `docker-compose.yml`, `ci.yml` con `lint` y `unit` | `npm run doctor` y `pnpm test` pasan, y la CI corre en los PR |
 | **F2 Dominio y base de datos** | Esquema de Drizzle y migraciones (incluida la exclusion constraint), dominio puro, repositorios, servicios, tests de integración con concurrencia | Casos de §8.2 (dominio e integración) en verde. Cobertura del dominio ≥ 90 % |
 | **F3 API e infra** | Módulos `network`, `database`, `auth` y `api`, Lambdas `me`, `resources`, `bookings`, `admin` y `migrator`, seed, `local:up`, E2E API, job `e2e-local` | Flujo de reserva completo por API en Floci, en local y en CI |
