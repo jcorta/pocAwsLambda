@@ -11,6 +11,10 @@ export interface LambdaConfig {
    * (`rds.force_ssl`). Con `require` se cifra la conexión sin verificar la CA.
    */
   dbSsl: DbSslMode;
+  /** Cola de notificaciones. Solo la tiene la Lambda `bookings`, la única que publica (SPEC §6.7). */
+  notificationsQueueUrl: string | undefined;
+  /** Remitente de los emails. Solo lo usa el `notifier`. */
+  sesFrom: string | undefined;
 }
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): LambdaConfig {
@@ -22,5 +26,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): LambdaConfig {
     timezone: env["APP_TIMEZONE"] ?? "America/Argentina/Buenos_Aires",
     dbSecretArn,
     dbSsl,
+    notificationsQueueUrl: env["NOTIFICATIONS_QUEUE_URL"] || undefined,
+    sesFrom: env["SES_FROM"] || undefined,
   };
 }

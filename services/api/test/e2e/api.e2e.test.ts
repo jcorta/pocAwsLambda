@@ -11,11 +11,22 @@ import {
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { ALL_WEEK, api, createUser, dayFromToday, type TestUser } from "./support.ts";
+import {
+  ALL_WEEK,
+  api,
+  capturedEmails,
+  config,
+  createUser,
+  dayFromToday,
+  waitForEmail,
+  type TestUser,
+} from "./support.ts";
 
 let admin: TestUser;
 
 beforeAll(async () => {
+  // Bandeja de SES vacía al empezar (SPEC §8.3). Los tests igual filtran por su propio usuario.
+  await fetch(`${config.cognito.endpoint}/_aws/ses`, { method: "DELETE" });
   admin = await createUser({ admin: true });
 });
 
@@ -190,5 +201,42 @@ describe("flujo de reserva (CU-02 a CU-06)", () => {
 
     const tooFar = await send({ resourceId: resource.id, startsAt: `${dayFromToday(45)}T08:00:00-03:00` });
     expect([tooFar.status, errorCode(tooFar.body)]).toEqual([400, "DATE_OUT_OF_RANGE"]);
+  });
+});
+
+describe("notificaciones por email (CU-10): bookings → SQS → notifier → SES", () => {
+  it("reservar y cancelar envían un email cada uno al titular, sin duplicados", async () => {
+    const resource = await newResource();
+    const user = await createUser();
+    const startsAt = (await slotsOf(resource.id, user.idToken, dayFromToday(7)))[1]!.startsAt;
+    const booking = BookingSchema.parse(
+      (await api("POST", "/v1/bookings", { token: user.idToken, body: { resourceId: resource.id, startsAt } })).body,
+    );
+
+    const confirmed = await waitForEmail(user.email, (m) => m.Subject === `Reserva confirmada: ${resource.name}`);
+    expect(confirmed.Body.text_part).toContain("Tu reserva quedó confirmada.");
+    expect(confirmed.Body.text_part).toMatch(/de 09:00 a 10:00/);
+
+    await api("POST", `/v1/bookings/${booking.id}/cancel`, { token: user.idToken });
+    const cancelled = await waitForEmail(user.email, (m) => m.Subject === `Reserva cancelada: ${resource.name}`);
+    expect(cancelled.Body.text_part).toContain("Cancelaste tu reserva.");
+
+    // Un email por evento: ni la entrega "al menos una vez" de SQS ni los reintentos los duplican
+    expect((await capturedEmails(user.email)).map((m) => m.Subject).sort()).toEqual([
+      `Reserva cancelada: ${resource.name}`,
+      `Reserva confirmada: ${resource.name}`,
+    ]);
+  });
+
+  it("si cancela un admin, el email lo dice", async () => {
+    const resource = await newResource();
+    const user = await createUser();
+    const startsAt = (await slotsOf(resource.id, user.idToken, dayFromToday(8)))[0]!.startsAt;
+    const booking = BookingSchema.parse(
+      (await api("POST", "/v1/bookings", { token: user.idToken, body: { resourceId: resource.id, startsAt } })).body,
+    );
+    await api("POST", `/v1/bookings/${booking.id}/cancel`, { token: admin.idToken });
+    const email = await waitForEmail(user.email, (m) => m.Subject.startsWith("Reserva cancelada"));
+    expect(email.Body.text_part).toContain("Un administrador canceló tu reserva.");
   });
 });

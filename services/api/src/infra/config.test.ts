@@ -8,7 +8,14 @@ describe("readConfig", () => {
       timezone: "America/Argentina/Buenos_Aires",
       dbSecretArn: "arn:x",
       dbSsl: "require",
+      notificationsQueueUrl: undefined,
+      sesFrom: undefined,
     }));
+
+  it("lee la cola de notificaciones y el remitente", () =>
+    expect(
+      readConfig({ DB_SECRET_ARN: "arn:x", NOTIFICATIONS_QUEUE_URL: "http://q", SES_FROM: "no-reply@example.com" }),
+    ).toMatchObject({ notificationsQueueUrl: "http://q", sesFrom: "no-reply@example.com" }));
 
   it("respeta APP_TIMEZONE y DB_SSL=disable (Floci)", () =>
     expect(readConfig({ DB_SECRET_ARN: "arn:x", APP_TIMEZONE: "UTC", DB_SSL: "disable" })).toMatchObject({

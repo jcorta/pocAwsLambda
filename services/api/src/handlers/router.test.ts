@@ -1,12 +1,17 @@
 import { Logger } from "@aws-lambda-powertools/logger";
 import { Temporal } from "temporal-polyfill";
 import { describe, expect, it, vi } from "vitest";
-import type { ServiceDeps } from "../services/context.ts";
+import { noPublish, type ServiceDeps } from "../services/context.ts";
 import { ADMIN_CLAIMS, bodyOf, httpEvent } from "./__fixtures__/events.ts";
 import { json } from "./http.ts";
 import { createLambdaHandler } from "./router.ts";
 
-const deps = { db: {} as never, now: () => Temporal.Now.instant(), timezone: "UTC" } satisfies ServiceDeps;
+const deps = {
+  db: {} as never,
+  now: () => Temporal.Now.instant(),
+  timezone: "UTC",
+  publishEvent: noPublish,
+} satisfies ServiceDeps;
 const logger = new Logger({ serviceName: "test", logLevel: "SILENT" });
 
 const handlerWith = (opts: { requireAdmin?: boolean; fail?: boolean } = {}) =>
