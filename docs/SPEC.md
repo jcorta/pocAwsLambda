@@ -977,7 +977,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 ### 12.1 Decisiones de la Parte 3
 - ~~D-3.1 Salida de red de las Lambdas en AWS real~~ → **Diferida a F7.**
   - Queda como variable `network_egress = "nat" | "endpoints"` en `envs/aws`, con el valor `none` en local.
-  - El módulo `network` implementa las dos opciones.
+  - El módulo `network` ya tiene la variable, pero por ahora solo admite `none`. Las dos opciones se implementan en F7, cuando se decida.
   - No afecta el código, el entorno local ni la CI.
 - ~~D-3.2 Cuándo corre `e2e-local` en CI~~ → **Resuelta: en cada PR y en cada push a `main`**, con filtros por ruta para los cambios que solo tocan documentación (§9.1). Si el tiempo o los minutos molestan, se puede pasar a correr la UI solo en `main`.
 - ~~D-3.3 Visibilidad del repositorio de GitHub~~ → **Resuelta: privado hasta que esté pulido, después público** (§9.3). Desde el día 1 no se versionan secretos y se escanean con `gitleaks`.

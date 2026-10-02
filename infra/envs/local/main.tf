@@ -1,0 +1,131 @@
+# Entorno local sobre Floci (SPEC §7). Las diferencias con AWS viven solo acá:
+# provider con endpoints, issuer de Cognito, URL de la API, DB_SSL y CORS (SPEC §7.3).
+
+terraform {
+  required_version = ">= 1.10"
+  required_providers {
+    aws     = { source = "hashicorp/aws", version = "~> 6.0" }
+    archive = { source = "hashicorp/archive", version = "~> 2.0" }
+    random  = { source = "hashicorp/random", version = "~> 3.0" }
+  }
+  # Floci es efímero: el state local se descarta cuando se recrea el contenedor (SPEC §7.7)
+  backend "local" {}
+}
+
+variable "floci_endpoint" {
+  description = "Cómo llega Terraform a Floci: http://floci:4566 desde el contenedor de Terraform."
+  type        = string
+  default     = "http://localhost:4566"
+}
+
+variable "public_floci_url" {
+  description = "Cómo se ve Floci desde el navegador y desde Cognito: emisor de los tokens (hallazgo del spike F0)."
+  type        = string
+  default     = "http://localhost:4566"
+}
+
+variable "timezone" {
+  type    = string
+  default = "America/Argentina/Buenos_Aires"
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  access_key                  = "test"
+  secret_key                  = "test"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+  s3_use_path_style           = true
+
+  endpoints {
+    apigatewayv2   = var.floci_endpoint
+    cognitoidp     = var.floci_endpoint
+    ec2            = var.floci_endpoint
+    iam            = var.floci_endpoint
+    lambda         = var.floci_endpoint
+    logs           = var.floci_endpoint
+    rds            = var.floci_endpoint
+    s3             = var.floci_endpoint
+    secretsmanager = var.floci_endpoint
+    ses            = var.floci_endpoint
+    sqs            = var.floci_endpoint
+    sts            = var.floci_endpoint
+  }
+
+  default_tags {
+    tags = { project = "reservas", env = "local", "managed-by" = "terraform" }
+  }
+}
+
+locals {
+  name = "reservas-local"
+}
+
+module "network" {
+  source = "../../modules/network"
+  name   = local.name
+}
+
+module "database" {
+  source            = "../../modules/database"
+  name              = local.name
+  subnet_ids        = module.network.private_subnet_ids
+  security_group_id = module.network.db_security_group_id
+}
+
+module "auth" {
+  source = "../../modules/auth"
+  name   = local.name
+}
+
+module "api" {
+  source            = "../../modules/api"
+  name              = local.name
+  lambda_dist_dir   = "${path.root}/../../../services/api/dist/lambdas"
+  subnet_ids        = module.network.private_subnet_ids
+  security_group_id = module.network.lambda_security_group_id
+  db_secret_arn     = module.database.secret_arn
+  db_ssl            = "disable"
+  timezone          = var.timezone
+  # En Floci el emisor es la URL de Floci + el id del pool (SPEC §7.3)
+  cognito_issuer_url = "${var.public_floci_url}/${module.auth.user_pool_id}"
+  cognito_client_id  = module.auth.client_id
+  cors_origins       = ["http://localhost:3000"]
+}
+
+# --- Outputs (SPEC §7.5): los leen los scripts de deploy, seed y tests con `terraform output -json` ---
+
+output "api_url" {
+  # En Floci, api_endpoint devuelve una URL con formato de AWS que no sirve (hallazgo A5)
+  value = "http://${module.api.api_id}.execute-api.localhost.floci.io:4566"
+}
+
+output "user_pool_id" {
+  value = module.auth.user_pool_id
+}
+
+output "user_pool_client_id" {
+  value = module.auth.client_id
+}
+
+output "cognito_issuer_url" {
+  value = "${var.public_floci_url}/${module.auth.user_pool_id}"
+}
+
+output "migrator_function_name" {
+  value = module.api.function_names["migrator"]
+}
+
+output "function_names" {
+  value = module.api.function_names
+}
+
+output "db_secret_arn" {
+  value = module.database.secret_arn
+}
+
+output "db_port" {
+  description = "Desde el host: localhost:<db_port> (proxy de RDS de Floci)."
+  value       = module.database.port
+}

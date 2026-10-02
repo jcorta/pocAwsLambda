@@ -1,0 +1,19 @@
+{
+  "//": "Rutas de la API (SPEC §4.5) y la Lambda que atiende cada una (SPEC §6.7). En JSON para que el test de consistencia con LAMBDA_ROUTES (services/api) lo lea sin interpretar HCL.",
+  "locals": {
+    "routes": {
+      "GET /v1/me": "me",
+      "GET /v1/resources": "resources",
+      "GET /v1/resources/{id}": "resources",
+      "GET /v1/resources/{id}/availability": "resources",
+      "POST /v1/bookings": "bookings",
+      "GET /v1/bookings/me": "bookings",
+      "POST /v1/bookings/{id}/cancel": "bookings",
+      "POST /v1/admin/resources": "admin",
+      "PUT /v1/admin/resources/{id}": "admin",
+      "GET /v1/admin/bookings": "admin",
+      "GET /v1/admin/settings": "admin",
+      "PUT /v1/admin/settings": "admin"
+    }
+  }
+}
