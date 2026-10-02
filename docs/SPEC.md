@@ -406,7 +406,7 @@ Dentro de **una** transacción:
 |---|---|---|
 | `POST /v1/admin/resources` | Crear un recurso (CU-07). Body: `{ name, description?, attributes?, slotMinutes, openingHours[] }` | `201 Resource` · `400 VALIDATION_ERROR` · `409 RESOURCE_NAME_TAKEN` |
 | `PUT /v1/admin/resources/{id}` | Reemplazar un recurso completo, incluidos `openingHours` e `isActive`. Desactivar es `isActive: false` (RN-09) | `200 Resource` · `400` · `404` · `409 RESOURCE_NAME_TAKEN` |
-| `GET /v1/admin/bookings` | Todas las reservas (CU-08). Filtros: `resourceId`, `from`, `to` (fechas), `status`, `userEmail` (coincidencia exacta). Ordenadas por inicio descendente y paginadas | `200 { items: Booking[], nextCursor }` |
+| `GET /v1/admin/bookings` | Todas las reservas (CU-08). Filtros: `resourceId`, `from` y `to` (fechas `YYYY-MM-DD` de `APP_TIMEZONE`, **ambas inclusive**, aplicadas al inicio del turno), `status` y `userEmail` (coincidencia exacta). Ordenadas por inicio descendente y paginadas | `200 { items: Booking[], nextCursor }` |
 | `GET /v1/admin/settings` | Configuración actual (CU-09) | `200 { maxActiveBookingsPerUser, cancellationMinHours, bookingHorizonDays, updatedAt }` |
 | `PUT /v1/admin/settings` | Modificar la configuración. Body: los tres valores | `200 Settings` · `400 VALIDATION_ERROR` |
 

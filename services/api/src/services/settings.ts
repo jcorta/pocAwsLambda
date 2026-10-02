@@ -1,7 +1,7 @@
 // Configuración de reglas (CU-09, admin).
 import type { FieldError } from "../domain/rules.ts";
 import { reject, type BookingSettings } from "../domain/types.ts";
-import { getSettings, updateSettings } from "../repositories/settings.ts";
+import { getSettings, updateSettings, type SettingsRecord } from "../repositories/settings.ts";
 import { success, type ServiceDeps, type ServiceResult } from "./context.ts";
 
 const MINIMUMS: Record<keyof BookingSettings, number> = {
@@ -10,7 +10,7 @@ const MINIMUMS: Record<keyof BookingSettings, number> = {
   bookingHorizonDays: 1,
 };
 
-export function readSettings(deps: ServiceDeps): Promise<BookingSettings> {
+export function readSettings(deps: ServiceDeps): Promise<SettingsRecord> {
   return getSettings(deps.db);
 }
 
@@ -18,7 +18,7 @@ export function readSettings(deps: ServiceDeps): Promise<BookingSettings> {
 export async function changeSettings(
   deps: ServiceDeps,
   values: BookingSettings,
-): Promise<ServiceResult<BookingSettings>> {
+): Promise<ServiceResult<SettingsRecord>> {
   const fields: FieldError[] = [];
   for (const [key, min] of Object.entries(MINIMUMS) as [keyof BookingSettings, number][]) {
     const v = values[key];

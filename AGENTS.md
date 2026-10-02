@@ -93,6 +93,11 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - **Las fechas se calculan con Temporal** (`temporal-polyfill`), nunca con `Date` ni con offsets fijos. Los turnos se generan en tiempo absoluto (regla de los días de cambio de hora en SPEC §2.2).
 - **Las reglas devuelven `RuleResult`** (`{ ok: true }` o `{ ok: false, code, details }`, en `src/domain/types.ts`) en lugar de lanzar excepciones. Los códigos salen de `ERROR_CODES` en `@reservas/shared`.
 - **Servicios** (`src/services`): reciben `ServiceDeps` (`db`, `now()` y `timezone`) y un `Actor`, y devuelven `ServiceResult`. Dentro de una transacción, una regla que falla se corta con `fail(...)`, que revierte la transacción, y `catchFailure` la convierte en resultado. Los errores de Postgres se traducen por SQLSTATE (`pgErrorCode`): `23P01` → `SLOT_TAKEN` y `23505` → `RESOURCE_NAME_TAKEN`.
+- **Handlers** (`src/handlers`):
+  - Cada Lambda tiene su mapa de rutas en `handlers/routes/<lambda>.ts`, y `handlers/routes/index.ts` (`LAMBDA_ROUTES`) es el registro que Terraform debe reflejar.
+  - `createLambdaHandler` resuelve el actor (con `token_use = id`), aplica `requireAdmin`, rutea y convierte las excepciones en `500 INTERNAL_ERROR`.
+  - Los handlers solo validan con Zod (`parseBody`, `parseQuery` y `pathId`), llaman al servicio y serializan con `serializers.ts`. La lógica va en los servicios.
+  - Un `{id}` que no es UUID responde 404 sin consultar la base.
 - **Repositorios** (`src/repositories`): aceptan `DbOrTx`, así funcionan dentro o fuera de una transacción. Las fechas se convierten en el borde con `toDate` y `toInstant`.
 - **Cobertura:** `pnpm test` en `services/api` mide la cobertura y falla si `src/domain/**` baja del 90 % de líneas. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
 - **Las reglas de concurrencia viven en la base de datos**: exclusion constraint y `FOR UPDATE` (SPEC §3.3). No reemplazarlas por chequeos en código.
