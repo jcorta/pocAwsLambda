@@ -15,6 +15,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { SLOT_MINUTES } from "../../domain/types.ts";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -27,8 +28,6 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   ...timestamps,
 });
-
-export const SLOT_MINUTES = [15, 30, 45, 60, 90, 120] as const;
 
 export const resources = pgTable(
   "resources",

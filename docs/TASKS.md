@@ -37,9 +37,9 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 
 - [x] Esquema Drizzle: `users`, `resources`, `resource_opening_hours`, `bookings`, `settings` y `notification_log`
 - [x] Migración inicial con SQL manual: `btree_gist`, exclusion constraint, CHECKs y fila de `settings`
-- [ ] Dominio: generación de turnos con zona horaria (`now` y `timezone` inyectados)
-- [ ] Dominio: reglas RN-02, RN-03, RN-05 y RN-06
-- [ ] Tests unitarios de dominio, en dos zonas horarias y con los casos de borde de §8.2
+- [x] Dominio: generación de turnos con zona horaria (`now` y `timezone` inyectados)
+- [x] Dominio: reglas RN-02, RN-03, RN-05 y RN-06 (además: estado de turnos de CU-03 y validación de horario de CU-07)
+- [x] Tests unitarios de dominio, en dos zonas horarias y con los casos de borde de §8.2 (56 tests, cobertura 100 %)
 - [ ] Repositorios
 - [ ] Servicios: reservar (transacción de §3.3), cancelar, gestionar recursos y configuración
 - [x] Setup de Testcontainers con `postgres:16`
