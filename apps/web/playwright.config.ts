@@ -1,17 +1,12 @@
 // E2E de UI (SPEC §8): recorridos clave en el sitio servido desde el S3 de Floci.
-// Requiere `pnpm local:up` y `pnpm deploy:web:local`.
+// Requiere `pnpm local:up` y `pnpm deploy:web:local`. Playwright levanta solo el proxy del mismo origen
+// (`pnpm local:site`, hallazgo A8), y el navegador entra por http://localhost:3002.
 import { defineConfig, devices } from "@playwright/test";
-import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const baseURL =
-  process.env["E2E_BASE_URL"] ??
-  execFileSync(process.execPath, [join(root, "scripts", "local", "output.mjs"), "frontend_url"], {
-    encoding: "utf8",
-    cwd: root,
-  }).trim();
+const baseURL = process.env["E2E_BASE_URL"] ?? "http://localhost:3002/";
 
 export default defineConfig({
   testDir: "e2e",
@@ -21,4 +16,10 @@ export default defineConfig({
   reporter: process.env["CI"] ? [["list"], ["github"]] : "list",
   use: { baseURL, trace: "retain-on-failure", locale: "es-AR" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  webServer: {
+    command: `node ${JSON.stringify(join(root, "scripts", "local", "site.mjs"))}`,
+    url: new URL("config.json", baseURL).toString(),
+    reuseExistingServer: true,
+    timeout: 60_000,
+  },
 });

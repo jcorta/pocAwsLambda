@@ -1,42 +1,26 @@
-// Chequeos del entorno del navegador que necesita el login con Cognito desde el sitio en S3.
+// Chequeo del entorno del navegador que necesita el login con Cognito (hallazgo A8 de docs/spikes/floci.md):
+// el sitio se sirve por el proxy del mismo origen, que es un contexto seguro y reenvía Cognito sin CORS.
 import { expect, test } from "@playwright/test";
-import { runtimeConfig } from "./support.ts";
 import "./diagnostics.ts";
+import { runtimeConfig } from "./support.ts";
 
-test("el navegador puede hablar con Cognito desde el origen del sitio", async ({ page, baseURL }) => {
+test("el navegador llega a Cognito por el proxy del mismo origen, en un contexto seguro", async ({ page, baseURL }) => {
   const config = await runtimeConfig(baseURL!);
-  await page.goto("/login/");
+  expect(config.cognito.endpoint, "en local, Cognito va por el proxy").toBe("/_floci/cognito");
 
+  await page.goto("/login/");
   const env = await page.evaluate(() => ({
     origin: location.origin,
     isSecureContext: window.isSecureContext,
     hasRandomUUID: typeof crypto.randomUUID === "function",
   }));
-  console.log(`[entorno] ${JSON.stringify(env)}`);
+  expect(env).toMatchObject({ isSecureContext: true, hasRandomUUID: true });
 
-  // Preflight CORS hacia Cognito de Floci, como lo haría el SDK desde el navegador
-  const preflight = await fetch(config.cognito.endpoint ?? "", {
-    method: "OPTIONS",
-    headers: {
-      origin: env.origin,
-      "access-control-request-method": "POST",
-      "access-control-request-headers":
-        "content-type,x-amz-target,x-amz-user-agent,amz-sdk-invocation-id,amz-sdk-request",
-    },
-  });
-  const cors = {
-    status: preflight.status,
-    allowOrigin: preflight.headers.get("access-control-allow-origin"),
-    allowHeaders: preflight.headers.get("access-control-allow-headers"),
-    allowMethods: preflight.headers.get("access-control-allow-methods"),
-  };
-  console.log(`[cors cognito] ${JSON.stringify(cors)}`);
-
-  // Llamada real desde la página: InitiateAuth con un usuario inexistente debe responder un error de Cognito, no de red
-  const fromPage = await page.evaluate(
-    async ({ endpoint, clientId }) => {
+  // InitiateAuth con un usuario inexistente: tiene que llegar a Cognito y responder su error, no uno de red
+  const result = await page.evaluate(
+    async ({ clientId }) => {
       try {
-        const res = await fetch(endpoint, {
+        const res = await fetch("/_floci/cognito", {
           method: "POST",
           headers: {
             "content-type": "application/x-amz-json-1.1",
@@ -48,14 +32,14 @@ test("el navegador puede hablar con Cognito desde el origen del sitio", async ({
             AuthParameters: { USERNAME: "nadie@example.com", PASSWORD: "x" },
           }),
         });
-        return { ok: true, status: res.status, body: (await res.text()).slice(0, 200) };
+        return { ok: true, status: res.status, body: await res.text() };
       } catch (err) {
         return { ok: false, error: String(err) };
       }
     },
-    { endpoint: config.cognito.endpoint ?? "", clientId: config.cognito.clientId },
+    { clientId: config.cognito.clientId },
   );
-  console.log(`[fetch desde la página] ${JSON.stringify(fromPage)}`);
 
-  expect(fromPage.ok, "el navegador bloqueó la llamada a Cognito (¿CORS?)").toBe(true);
+  expect(result.ok, `el navegador no llegó a Cognito: ${JSON.stringify(result)}`).toBe(true);
+  expect(result.body).toMatch(/NotAuthorized|UserNotFound/);
 });

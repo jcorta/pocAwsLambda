@@ -49,7 +49,10 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `docker compose --profile ui down -v` | Baja el entorno y borra el volumen de datos de Floci (es efímero) |
 | `docker compose run --rm terraform <args>` | Terraform en contenedor (perfil `tools`), con la versión de `.terraform-version` |
 | `pnpm local:up [--ui]` | **Todo el entorno local de punta a punta:** `doctor`, Floci (y Floci UI), build, Terraform, migraciones, seed y `apps/web/public/config.json`. Tarda unos 3 minutos desde cero y 1 minuto si ya está levantado. Es idempotente |
-| `pnpm dev` | Frontend con `next dev` en `:3000` contra la API de Floci (usa el `config.json` que genera `local:up`) |
+| `pnpm dev` | Frontend en `http://localhost:3000` contra la API de Floci (usa el `config.json` que genera `local:up`). `next dev` corre en `:3001` detrás del proxy del mismo origen |
+| `pnpm deploy:web:local` | Build estático y sincronización con el bucket de Floci, sin tocar `config.json` |
+| `pnpm local:site` | El sitio publicado en S3, en `http://localhost:3002` (por el proxy) |
+| `pnpm test:e2e:ui` | E2E de UI con Playwright contra el sitio en S3. Requiere `local:up` y `deploy:web:local`; el proxy lo levanta Playwright. La primera vez: `pnpm --filter @reservas/web exec playwright install chromium` |
 | `pnpm deploy:local` | Ciclo rápido tras cambiar el backend: build, Terraform y migraciones (~50 s) |
 | `pnpm local:seed` | Seed idempotente: usuarios de `.env.local` y 3 recursos de ejemplo |
 | `pnpm local:logs [lambda]` | Logs de Floci, o de una Lambda (`me`, `resources`, `bookings`, `admin` o `migrator`) |
@@ -107,6 +110,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - El lockfile de providers (`.terraform.lock.hcl`) se versiona.
 - **Floci deja volúmenes propios** (los de RDS, con la etiqueta `floci=true`) que `docker compose down -v` no borra. `pnpm local:down` y `local:reset` los limpian; no bajar el entorno con `docker compose down` a mano.
 - **Floci y Cognito:** si el usuario ya existe en un pool que usa el email como nombre de usuario, `AdminCreateUser` responde `AliasExistsException`, no `UsernameExistsException`.
+- **Cognito de Floci no soporta CORS (hallazgo A8):** el navegador siempre entra por el proxy del mismo origen (`scripts/local/web-proxy.mjs`, puertos 3000 y 3002), que reenvía `/_floci/cognito` a Floci. Abrir directo `:3001` o el website de S3 rompe el login. Desde Node (tests y scripts) se habla directo con Floci.
 - **Migraciones:** solo hacia adelante. Nunca se edita una migración ya mergeada; los cambios van en una migración nueva.
 - **El dominio es puro.** `services/api/src/domain` no importa AWS, la base de datos ni el reloj del sistema: `now` y `timezone` se reciben como parámetros.
 - **Las fechas se calculan con Temporal** (`temporal-polyfill`), nunca con `Date` ni con offsets fijos. Los turnos se generan en tiempo absoluto (regla de los días de cambio de hora en SPEC §2.2).

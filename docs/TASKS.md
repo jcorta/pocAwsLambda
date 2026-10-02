@@ -82,8 +82,9 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Páginas de usuario: recursos, detalle con disponibilidad y mis reservas
 - [x] Páginas de admin: recursos, edición, reservas y configuración
 - [x] Mensajes para cada código de error, y estados de carga, vacío y error
-- [ ] Módulo de Terraform `frontend`: sitio S3 y `config.json`
-- [ ] `deploy:web:local` (`s3 sync --exclude config.json`)
+- [x] Módulo de Terraform `frontend`: sitio S3 y `config.json`
+- [x] `deploy:web:local` (`s3 sync --exclude config.json`)
+- [x] Proxy local del mismo origen para Cognito (hallazgo A8: Cognito de Floci no soporta CORS), con `pnpm dev` y `pnpm local:site`
 - [x] Tests unitarios de la web (38 tests)
 - [ ] E2E de UI con Playwright, también en la CI
 

@@ -102,8 +102,9 @@ module "api" {
   # En Floci el emisor es la URL de Floci + el id del pool (SPEC §7.3)
   cognito_issuer_url = "${var.public_floci_url}/${module.auth.user_pool_id}"
   cognito_client_id  = module.auth.client_id
-  # `pnpm dev` y el sitio servido desde S3 (SPEC §7.3)
-  cors_origins = ["http://localhost:3000", local.site_url]
+  # El navegador entra siempre por el proxy del mismo origen (hallazgo A8): :3000 (`pnpm dev`) y :3002 (sitio en S3).
+  # El website de S3 directo queda permitido por si se abre sin proxy, aunque ahí el login falla por CORS de Cognito.
+  cors_origins = ["http://localhost:3000", "http://localhost:3002", local.site_url]
 
   notifications_queue_url = module.notifications.queue_url
   notifications_queue_arn = module.notifications.queue_arn
@@ -119,7 +120,8 @@ module "frontend" {
       region     = "us-east-1"
       userPoolId = module.auth.user_pool_id
       clientId   = module.auth.client_id
-      endpoint   = var.public_floci_url
+      # Ruta del mismo origen: la atiende el proxy local, porque Cognito de Floci no soporta CORS (hallazgo A8)
+      endpoint = "/_floci/cognito"
     }
     timezone = var.timezone
   }
@@ -137,7 +139,13 @@ output "frontend_bucket" {
 }
 
 output "frontend_url" {
-  value = "${local.site_url}/"
+  description = "URL para el navegador: el sitio en S3 a través del proxy del mismo origen (`pnpm local:site`)."
+  value       = "http://localhost:3002/"
+}
+
+output "frontend_s3_url" {
+  description = "Website de S3 directo (sin proxy: el login con Cognito no funciona por CORS)."
+  value       = "${local.site_url}/"
 }
 
 output "user_pool_id" {

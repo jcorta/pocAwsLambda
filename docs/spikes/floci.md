@@ -54,6 +54,7 @@ docker compose down   # limpia todo: Floci es efímero
 | **A5** | En Floci, el output `api_endpoint` devuelve una URL con formato de AWS que no sirve localmente. `envs/local` arma la URL con `api_id` | §7.3 y §7.5 |
 | **A6** | Las URLs `*.localhost.floci.io` dependen de un DNS público que resuelve a `127.0.0.1`. Sin conexión a Internet, la API y el sitio no resuelven desde el host | §11.3 |
 | **A7** | Crear la instancia RDS tarda unos 90 s: es el paso más lento de `local:up` y del job `e2e-local` | §9.1 y §10.1 |
+| **A8** *(F5)* | **Cognito de Floci no soporta CORS**: el preflight `OPTIONS` responde 405 sin headers, y no hay opción de configuración para cambiarlo. El navegador no puede llamar a Cognito desde el origen del sitio, y el spike no lo detectó porque todo corría desde Node. Además, el website de S3 (`http` en un host que no es `localhost`) no es un contexto seguro: falta `crypto.randomUUID`. **Solución: proxy local en el mismo origen** (`scripts/local/web-proxy.mjs`), en `localhost`, que reenvía `/_floci/cognito` a Floci. En AWS real no hace falta, porque Cognito soporta CORS | §5.2, §7.3 y §10 |
 
 ## Ejecución en GitHub Actions
 - **29/29 chequeos OK en `ubuntu-latest`** el 2026-10-02, en 2 min 57 s ([run 37043661160](https://github.com/jcorta/pocAwsLambda/actions/runs/37043661160)), con el workflow `.github/workflows/spike-f0.yml`.

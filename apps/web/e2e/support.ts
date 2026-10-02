@@ -12,6 +12,12 @@ import type { RuntimeConfig } from "../src/lib/config.ts";
 
 export const PASSWORD = "E2e-ui-pass1";
 
+/**
+ * El soporte de los tests corre en Node, donde no hay CORS: habla directo con Floci. El navegador, en cambio,
+ * llega a Cognito por el proxy del mismo origen (`/_floci/cognito`, hallazgo A8).
+ */
+export const FLOCI_URL = process.env["FLOCI_URL"] ?? "http://localhost:4566";
+
 let cached: RuntimeConfig | undefined;
 
 /** La misma config que lee el sitio: así los tests usan exactamente el entorno desplegado. */
@@ -23,7 +29,7 @@ export async function runtimeConfig(baseURL: string): Promise<RuntimeConfig> {
 function cognito(config: RuntimeConfig) {
   return new CognitoIdentityProviderClient({
     region: config.cognito.region,
-    ...(config.cognito.endpoint ? { endpoint: config.cognito.endpoint } : {}),
+    endpoint: FLOCI_URL,
     credentials: { accessKeyId: "test", secretAccessKey: "test" },
   });
 }
@@ -82,11 +88,10 @@ interface CapturedEmail {
 }
 
 /** Último email que recibió `to` según el SES de Floci (`/_aws/ses`). Espera hasta 15 s. */
-export async function lastEmailTo(baseURL: string, to: string): Promise<CapturedEmail> {
-  const config = await runtimeConfig(baseURL);
+export async function lastEmailTo(to: string): Promise<CapturedEmail> {
   const until = Date.now() + 15_000;
   while (Date.now() < until) {
-    const body = (await (await fetch(`${config.cognito.endpoint}/_aws/ses`)).json()) as { messages?: CapturedEmail[] };
+    const body = (await (await fetch(`${FLOCI_URL}/_aws/ses`)).json()) as { messages?: CapturedEmail[] };
     const found = (body.messages ?? []).filter((m) => m.Destination.ToAddresses.includes(to)).at(-1);
     if (found) return found;
     await new Promise((r) => setTimeout(r, 500));

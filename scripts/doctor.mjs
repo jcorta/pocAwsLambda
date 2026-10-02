@@ -13,7 +13,11 @@ const isWindows = process.platform === "win32";
 // Imagen efímera para verificar el acceso al socket de Docker desde un contenedor
 const SOCKET_PROBE_IMAGE = "docker:29-cli";
 const REQUIRED_PORTS = [4566, 3000, ...range(7001, 7010)];
-const OPTIONAL_PORTS = [{ port: 4500, service: "Floci UI" }];
+const OPTIONAL_PORTS = [
+  { port: 3001, service: "next dev detrás del proxy de `pnpm dev`" },
+  { port: 3002, service: "sitio en S3 por el proxy (`pnpm local:site`, E2E de UI)" },
+  { port: 4500, service: "Floci UI" },
+];
 const MIN_DOCKER_MEMORY_GB = 4;
 
 const results = [];

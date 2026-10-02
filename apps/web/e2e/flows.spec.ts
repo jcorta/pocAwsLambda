@@ -60,7 +60,7 @@ test("recargar la página pide login y, después, vuelve a la ruta de origen (D-
   await expect(page.getByRole("heading", { name: "Mis reservas" })).toBeVisible();
 });
 
-test("registro con el código de verificación real del email (CU-01)", async ({ page, baseURL }) => {
+test("registro con el código de verificación real del email (CU-01)", async ({ page }) => {
   const email = `ui-signup+${Date.now()}@example.com`;
   await page.goto("/register/");
   await page.getByLabel("Email").fill(email);
@@ -70,7 +70,7 @@ test("registro con el código de verificación real del email (CU-01)", async ({
   await expect(page).toHaveURL(/\/confirm\//);
 
   // Floci captura el email de verificación de Cognito (verificado en F5)
-  const verification = await lastEmailTo(baseURL!, email);
+  const verification = await lastEmailTo(email);
   const code = `${verification.Subject} ${verification.Body.text_part ?? ""}`.match(/\b(\d{6})\b/)?.[1];
   expect(code).toBeTruthy();
   await page.getByLabel("Código").fill(code!);
