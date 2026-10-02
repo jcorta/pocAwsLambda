@@ -1,0 +1,5 @@
+# Hooks de git. Se instalan con `pnpm install` (script prepare). SPEC §9.3.
+pre-commit:
+  jobs:
+    - name: gitleaks
+      run: node scripts/gitleaks.mjs --staged

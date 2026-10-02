@@ -48,9 +48,12 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm lint` | ESLint en todo el repo |
 | `pnpm format` / `pnpm format:check` | Formatea con Prettier, o solo verifica el formato |
 | `pnpm test` | Tests unitarios (Vitest) de cada paquete |
+| `pnpm secrets:staged` / `pnpm secrets:history` | gitleaks (en Docker) sobre lo que está por commitearse, o sobre todo el historial |
 
 - El resto de los comandos (`npm run doctor`, `pnpm local:up`, etc.) están definidos en SPEC §10.1 y se agregan a esta tabla a medida que existan.
 - Para el spike F0, ver la sección "Cómo reproducirlo" en `docs/spikes/floci.md`.
+- **Hook de pre-commit (Lefthook):** `pnpm install` lo instala con el script `prepare`; si no quedó instalado, se corre `pnpm run prepare`. Ejecuta gitleaks sobre lo que está por commitearse, así que **commitear requiere Docker corriendo**. Si Docker no está disponible, el hook falla y bloquea el commit: es intencional.
+- **pnpm bloquea los scripts de instalación de las dependencias.** Cada excepción se declara en `allowBuilds` (`pnpm-workspace.yaml`) y requiere aprobación. Por ahora la única entrada es `lefthook: false`: su script no hace falta, porque los hooks los instala `prepare`.
 - **pnpm aplica `minimumReleaseAge`:** rechaza versiones publicadas hace muy poco, como protección contra la cadena de suministro. Si una instalación falla por eso, se usa una versión anterior. **No** se agregan excepciones (`minimumReleaseAgeExclude`) sin aprobación.
 
 ## Convenciones
@@ -88,6 +91,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - **Ningún secreto en el repo**, ni siquiera en una rama temporal: el repo se va a hacer público con todo su historial (SPEC §9.3).
 - Solo se versionan `.env.example` y `*.tfvars.example`.
 - Nunca se registran en los logs tokens, contraseñas ni el contenido de los secretos.
+- **Nunca usar `git commit --no-verify`** para saltear el hook de gitleaks. Si marca un falso positivo, se agrega a `.gitleaksignore` con aprobación, explicando por qué no es un secreto.
 
 ## Qué consultar antes de hacer
 Preguntar al usuario **antes** de:

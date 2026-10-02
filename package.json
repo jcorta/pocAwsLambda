@@ -7,7 +7,10 @@
     "node": ">=24"
   },
   "scripts": {
+    "prepare": "lefthook install",
     "doctor": "node scripts/doctor.mjs",
+    "secrets:staged": "node scripts/gitleaks.mjs --staged",
+    "secrets:history": "node scripts/gitleaks.mjs --all",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -19,6 +22,7 @@
     "@types/node": "~24.19.0",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
+    "lefthook": "^2.1.16",
     "prettier": "^3.9.9",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.0",
