@@ -79,12 +79,12 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Next.js con export estático, Tailwind y TanStack Query
 - [x] Carga de `config.json` en tiempo de ejecución
 - [x] Auth con Cognito y tokens en memoria: login, registro, confirmación, refresh, logout y `?next=`
-- [ ] Páginas de usuario: recursos, detalle con disponibilidad y mis reservas
-- [ ] Páginas de admin: recursos, edición, reservas y configuración
-- [ ] Mensajes para cada código de error, y estados de carga, vacío y error
+- [x] Páginas de usuario: recursos, detalle con disponibilidad y mis reservas
+- [x] Páginas de admin: recursos, edición, reservas y configuración
+- [x] Mensajes para cada código de error, y estados de carga, vacío y error
 - [ ] Módulo de Terraform `frontend`: sitio S3 y `config.json`
 - [ ] `deploy:web:local` (`s3 sync --exclude config.json`)
-- [ ] Tests unitarios de la web
+- [x] Tests unitarios de la web (38 tests)
 - [ ] E2E de UI con Playwright, también en la CI
 
 ## [ ] F6 — Endurecimiento
