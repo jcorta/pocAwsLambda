@@ -30,9 +30,15 @@ export function loadConfig(): LocalConfig {
 
 export const config = loadConfig();
 
+/**
+ * Los E2E corren en Node, donde no hay CORS: hablan directo con Floci. `config.cognito.endpoint` es la ruta
+ * del proxy del mismo origen que usa el navegador (`/_floci/cognito`, hallazgo A8), que acá no sirve.
+ */
+export const FLOCI_URL = process.env["FLOCI_URL"] ?? "http://localhost:4566";
+
 const cognito = new CognitoIdentityProviderClient({
   region: config.cognito.region,
-  endpoint: config.cognito.endpoint,
+  endpoint: FLOCI_URL,
   credentials: { accessKeyId: "test", secretAccessKey: "test" },
 });
 
@@ -118,7 +124,7 @@ interface CapturedEmail {
 
 /** Emails que capturó el SES de Floci (`/_aws/ses`, docs/spikes/floci.md). */
 export async function capturedEmails(to: string): Promise<CapturedEmail[]> {
-  const res = await fetch(`${config.cognito.endpoint}/_aws/ses`);
+  const res = await fetch(`${FLOCI_URL}/_aws/ses`);
   const body = (await res.json()) as { messages?: CapturedEmail[] } | CapturedEmail[];
   const messages = Array.isArray(body) ? body : (body.messages ?? []);
   return messages.filter((m) => m.Destination.ToAddresses.includes(to));
