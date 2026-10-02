@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ✔ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ✔ · F5 ◐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -76,9 +76,9 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 ## [ ] F5 — Frontend
 > Terminado cuando: los recorridos E2E de UI de §8.2 están en verde en la CI.
 
-- [ ] Next.js con export estático, Tailwind y TanStack Query
-- [ ] Carga de `config.json` en tiempo de ejecución
-- [ ] Auth con Cognito y tokens en memoria: login, registro, confirmación, refresh, logout y `?next=`
+- [x] Next.js con export estático, Tailwind y TanStack Query
+- [x] Carga de `config.json` en tiempo de ejecución
+- [x] Auth con Cognito y tokens en memoria: login, registro, confirmación, refresh, logout y `?next=`
 - [ ] Páginas de usuario: recursos, detalle con disponibilidad y mis reservas
 - [ ] Páginas de admin: recursos, edición, reservas y configuración
 - [ ] Mensajes para cada código de error, y estados de carga, vacío y error

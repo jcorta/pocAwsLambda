@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Foco visible para la navegación con teclado (SPEC §5.5, accesibilidad básica) */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-blue-600;
+}

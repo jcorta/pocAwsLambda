@@ -152,7 +152,7 @@ Los códigos de error (`SLOT_TAKEN`, etc.) son identificadores estables que se d
 > - `AdminCreateUser` con `MessageAction=SUPPRESS` (sin email de invitación) y `email_verified=true`.
 > - `AdminSetUserPassword` con `Permanent=true`.
 >
-> Si un test necesita recorrer el registro (`SignUp`), lo confirma con `AdminConfirmSignUp`. Todas son APIs estándar de Cognito, también válidas en AWS. El flujo con el código real de CU-01 se valida a mano o, si Floci captura ese email en `/_aws/ses`, también en el E2E.
+> Si un test necesita recorrer el registro (`SignUp`), lo confirma con `AdminConfirmSignUp`. Todas son APIs estándar de Cognito, también válidas en AWS. El flujo con el código real de CU-01 también se puede probar en el E2E: **Floci captura el email de verificación de Cognito en `/_aws/ses`** (asunto "Your verification code", con el código de 6 dígitos), verificado en F5.
 
 ---
 
