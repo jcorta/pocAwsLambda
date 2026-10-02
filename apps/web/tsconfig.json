@@ -6,6 +6,6 @@
     "types": ["node"],
     "plugins": [{ "name": "next" }]
   },
-  "include": ["src", "*.config.ts"],
+  "include": ["src", "e2e", "*.config.ts"],
   "exclude": ["node_modules", "out", ".next"]
 }

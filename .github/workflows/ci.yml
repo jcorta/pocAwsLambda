@@ -125,6 +125,12 @@ jobs:
         run: pnpm local:up
       - name: E2E de la API
         run: pnpm test:e2e
+      - name: Publicar el sitio en el S3 de Floci
+        run: pnpm deploy:web:local
+      - name: Instalar Chromium para Playwright
+        run: pnpm --filter @reservas/web exec playwright install --with-deps chromium
+      - name: E2E de la UI (Playwright)
+        run: pnpm test:e2e:ui
 
       - name: Logs de Floci y de las Lambdas (si falló)
         if: failure()

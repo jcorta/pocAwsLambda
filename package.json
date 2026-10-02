@@ -15,6 +15,8 @@
     "local:down": "node scripts/local/down.mjs",
     "local:reset": "node scripts/local/down.mjs --reset",
     "deploy:local": "node scripts/local/deploy.mjs",
+    "deploy:web:local": "node scripts/local/deploy-web.mjs",
+    "test:e2e:ui": "pnpm --filter @reservas/web test:e2e:ui",
     "secrets:staged": "node scripts/gitleaks.mjs --staged",
     "secrets:history": "node scripts/gitleaks.mjs --all",
     "build": "pnpm -r --if-present build",
@@ -30,6 +32,7 @@
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1145.0",
     "@aws-sdk/client-lambda": "^3.1145.0",
+    "@aws-sdk/client-s3": "^3.1145.0",
     "@eslint/js": "^10.0.1",
     "@types/node": "~24.19.0",
     "@vitest/coverage-v8": "^5.0.3",
