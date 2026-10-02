@@ -24,7 +24,8 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 
 ## Estado actual
 - Hecho: la fase F0 (spike de Floci en `spikes/f0-floci/`), verificada en Windows y en el runner de GitHub (workflow `spike-f0`).
-- En curso: F1, la base del monorepo. Ya existe el esqueleto de los paquetes; su contenido llega en F2 a F5.
+- Hecho: F1, la base del monorepo (pnpm, TypeScript, lint, tests, `doctor`, compose, hook de gitleaks y CI). Los paquetes son esqueletos; su contenido llega en F2 a F5.
+- Próximo: F2, dominio y base de datos.
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)

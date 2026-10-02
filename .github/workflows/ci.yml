@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  # En CI no hace falta instalar los hooks de git (script prepare)
+  # Desactiva la ejecución de los hooks de git en CI (prepare los instala igual, sin efecto)
   LEFTHOOK: "0"
 
 jobs:
