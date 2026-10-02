@@ -46,7 +46,11 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `docker compose up -d floci` | Levanta Floci. Con `--profile ui` suma Floci UI (`:4500`), que incluye la bandeja de emails de SES |
 | `docker compose --profile ui down -v` | Baja el entorno y borra el volumen de datos de Floci (es efímero) |
 | `docker compose run --rm terraform <args>` | Terraform en contenedor (perfil `tools`), con la versión de `.terraform-version` |
-| `docker compose run --rm terraform -chdir=infra/envs/local apply` | Aplica la infra en Floci, con Floci levantado y después de `pnpm build`. Tarda unos 2 minutos la primera vez (RDS) |
+| `pnpm local:up [--ui]` | **Todo el entorno local de punta a punta:** `doctor`, Floci (y Floci UI), build, Terraform, migraciones, seed y `apps/web/public/config.json`. Tarda unos 3 minutos desde cero y 1 minuto si ya está levantado. Es idempotente |
+| `pnpm deploy:local` | Ciclo rápido tras cambiar el backend: build, Terraform y migraciones (~50 s) |
+| `pnpm local:seed` | Seed idempotente: usuarios de `.env.local` y 3 recursos de ejemplo |
+| `pnpm local:logs [lambda]` | Logs de Floci, o de una Lambda (`me`, `resources`, `bookings`, `admin` o `migrator`) |
+| `pnpm local:down` / `pnpm local:reset` | Baja el entorno y borra los volúmenes de Floci. `reset` además borra el state y lo generado (conserva `.env.local`) |
 | `pnpm typecheck` | `tsc --noEmit` en cada paquete |
 | `pnpm lint` | ESLint en todo el repo |
 | `pnpm format` / `pnpm format:check` | Formatea con Prettier, o solo verifica el formato |
@@ -95,7 +99,8 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - Los módulos (`infra/modules/*`) no saben en qué entorno corren; las diferencias van en `infra/envs/*`.
   - Las rutas de la API se declaran en `infra/modules/api/routes.tf.json`. Una ruta nueva va **ahí y** en `handlers/routes/<lambda>.ts`; el test `routes.test.ts` falla si no coinciden.
   - El lockfile de providers (`.terraform.lock.hcl`) se versiona.
-- **Floci deja volúmenes propios** (los de RDS, con la etiqueta `floci=true`) que `docker compose down -v` no borra. Se limpian con `docker volume rm` sobre `docker volume ls -q --filter label=floci=true`.
+- **Floci deja volúmenes propios** (los de RDS, con la etiqueta `floci=true`) que `docker compose down -v` no borra. `pnpm local:down` y `local:reset` los limpian; no bajar el entorno con `docker compose down` a mano.
+- **Floci y Cognito:** si el usuario ya existe en un pool que usa el email como nombre de usuario, `AdminCreateUser` responde `AliasExistsException`, no `UsernameExistsException`.
 - **Migraciones:** solo hacia adelante. Nunca se edita una migración ya mergeada; los cambios van en una migración nueva.
 - **El dominio es puro.** `services/api/src/domain` no importa AWS, la base de datos ni el reloj del sistema: `now` y `timezone` se reciben como parámetros.
 - **Las fechas se calculan con Temporal** (`temporal-polyfill`), nunca con `Date` ni con offsets fijos. Los turnos se generan en tiempo absoluto (regla de los días de cambio de hora en SPEC §2.2).

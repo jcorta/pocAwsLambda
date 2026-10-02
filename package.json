@@ -9,6 +9,12 @@
   "scripts": {
     "prepare": "lefthook install",
     "doctor": "node scripts/doctor.mjs",
+    "local:up": "node scripts/local/up.mjs",
+    "local:seed": "node scripts/local/seed.mjs",
+    "local:logs": "node scripts/local/logs.mjs",
+    "local:down": "node scripts/local/down.mjs",
+    "local:reset": "node scripts/local/down.mjs --reset",
+    "deploy:local": "node scripts/local/deploy.mjs",
     "secrets:staged": "node scripts/gitleaks.mjs --staged",
     "secrets:history": "node scripts/gitleaks.mjs --all",
     "build": "pnpm -r --if-present build",
@@ -20,6 +26,8 @@
     "test:integration": "pnpm -r --if-present test:integration"
   },
   "devDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1145.0",
+    "@aws-sdk/client-lambda": "^3.1145.0",
     "@eslint/js": "^10.0.1",
     "@types/node": "~24.19.0",
     "@vitest/coverage-v8": "^5.0.3",

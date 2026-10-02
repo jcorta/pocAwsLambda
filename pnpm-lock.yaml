@@ -166,6 +166,12 @@ importers:
 
   .:
     devDependencies:
+      '@aws-sdk/client-cognito-identity-provider':
+        specifier: ^3.1145.0
+        version: 3.1145.0
+      '@aws-sdk/client-lambda':
+        specifier: ^3.1145.0
+        version: 3.1145.0
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.11.0)
@@ -267,6 +273,14 @@ packages:
         optional: true
       '@middy/core':
         optional: true
+
+  '@aws-sdk/client-cognito-identity-provider@3.1145.0':
+    resolution: {integrity: sha512-vGNoZXsJqPwXkzfnP7C0W/L95501uZG2MYt5Oa6UClv6w12V7lBRTqRqdOgwJFBOgQYL2xIadAO0wLs4jYyigg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-lambda@3.1145.0':
+    resolution: {integrity: sha512-uaLSzgUtvnwccpE0vf0TPD5SClEQlF10QP5D4zGTKYKwa+uUWhto4wHNhvFKJ1fNsuC4hPT1MIVW840zhWCMfA==}
+    engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-secrets-manager@3.1145.0':
     resolution: {integrity: sha512-kRxso8x1GXFxNwFDmGvIn+vYkLs4svjrwdrRPsN9Sg0xPSBX1mE+fzQ+eyVi1ZfROD3etOwfJQPT9Z0lFLnGCg==}
@@ -2467,6 +2481,28 @@ snapshots:
     dependencies:
       '@aws-lambda-powertools/commons': 2.35.0
       '@aws/lambda-invoke-store': 0.3.0
+
+  '@aws-sdk/client-cognito-identity-provider@3.1145.0':
+    dependencies:
+      '@aws-sdk/core': 3.978.1
+      '@aws-sdk/credential-provider-node': 3.972.84
+      '@aws-sdk/types': 3.974.6
+      '@smithy/core': 3.35.1
+      '@smithy/fetch-http-handler': 5.8.0
+      '@smithy/node-http-handler': 4.12.1
+      '@smithy/types': 4.19.0
+      tslib: 2.8.1
+
+  '@aws-sdk/client-lambda@3.1145.0':
+    dependencies:
+      '@aws-sdk/core': 3.978.1
+      '@aws-sdk/credential-provider-node': 3.972.84
+      '@aws-sdk/types': 3.974.6
+      '@smithy/core': 3.35.1
+      '@smithy/fetch-http-handler': 5.8.0
+      '@smithy/node-http-handler': 4.12.1
+      '@smithy/types': 4.19.0
+      tslib: 2.8.1
 
   '@aws-sdk/client-secrets-manager@3.1145.0':
     dependencies:

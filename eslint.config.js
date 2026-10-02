@@ -12,7 +12,14 @@ export default tseslint.config(
     // Scripts de Node sin bundler (doctor, scripts del entorno local)
     files: ["**/scripts/**/*.mjs"],
     languageOptions: {
-      globals: { process: "readonly", console: "readonly", fetch: "readonly", AbortSignal: "readonly" },
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        AbortSignal: "readonly",
+        TextDecoder: "readonly",
+        setTimeout: "readonly",
+      },
     },
   },
   prettier,

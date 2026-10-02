@@ -56,8 +56,8 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Build con esbuild a `dist/lambdas/<nombre>/` (el zip lo arma Terraform con `archive_file`), con smoke test de los bundles
 - [x] Módulos de Terraform `network`, `database`, `auth` y `api` (61 recursos aplicados en Floci)
 - [x] Root `infra/envs/local`: provider de Floci, `api_url` y `cognito_issuer_url`
-- [ ] Seed: usuarios de Cognito, `settings` y recursos de ejemplo
-- [ ] Comandos `local:up`, `deploy:local`, `local:logs`, `local:down` y `local:reset`
+- [x] Seed: usuarios de Cognito y recursos de ejemplo (`settings` lo crea la migración)
+- [x] Comandos `local:up`, `deploy:local`, `local:logs`, `local:down` y `local:reset` (además: `local:seed`)
 - [x] Tests unitarios de handlers (más 19 tests de integración de la pila completa, que validan las respuestas contra el contrato)
 - [x] Test de consistencia entre las rutas de Terraform y los handlers
 - [ ] E2E de la API: auth, reservas, límites y cancelación
