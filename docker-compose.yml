@@ -1,0 +1,63 @@
+# Entorno local (SPEC §10). Base: `docker compose up -d floci`
+# Opcionales: `--profile ui` (Floci UI) y `--profile mail` (Mailpit).
+name: reservas
+
+services:
+  floci:
+    image: floci/floci:2.1.0 # versión validada en el spike F0; actualizarla implica volver a correrlo
+    ports:
+      - "4566:4566"
+      - "7001-7010:7001-7010" # proxy de RDS, para conectarse desde el host
+    environment:
+      # Configuración obligatoria (hallazgo A1 del spike F0)
+      FLOCI_SERVICES_DOCKER_NETWORK: floci-net
+      FLOCI_SERVICES_RDS_ENDPOINT_HOST: floci
+      FLOCI_SECURITY_ALLOW_PRIVATE_JWT_TARGETS: "true"
+      # Reenvío de emails a Mailpit. Si Mailpit no está levantado, Floci solo registra el fallo
+      # y los emails siguen disponibles en /_aws/ses.
+      FLOCI_SERVICES_SES_SMTP_HOST: mailpit
+      FLOCI_SERVICES_SES_SMTP_PORT: "1025"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - floci-net
+
+  floci-ui:
+    image: floci/floci-ui:0.5.0
+    profiles: ["ui"]
+    ports:
+      - "4500:4500"
+    environment:
+      FLOCI_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      - floci
+    networks:
+      - floci-net
+
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    profiles: ["mail"]
+    ports:
+      - "8025:8025" # interfaz web
+      - "1025:1025" # SMTP
+    networks:
+      - floci-net
+
+  # Terraform en contenedor. Misma versión que .terraform-version.
+  terraform:
+    image: hashicorp/terraform:1.16.4
+    profiles: ["tools"]
+    working_dir: /work
+    volumes:
+      - ./:/work
+    environment:
+      TF_VAR_floci_endpoint: http://floci:4566
+    networks:
+      - floci-net
+
+networks:
+  floci-net:
+    name: floci-net

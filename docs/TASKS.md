@@ -25,9 +25,9 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] TypeScript base (`tsconfig.base.json`) compartido por los paquetes
 - [x] ESLint y Prettier
 - [x] Vitest en cada paquete, con un test de humo
-- [ ] `scripts/doctor.mjs` y `npm run doctor` (§10)
-- [ ] `docker-compose.yml` definitivo: Floci con la configuración A1, perfiles `ui` y `mail`, y Terraform en contenedor
-- [ ] `.env.example` y `.terraform-version`
+- [x] `scripts/doctor.mjs` y `npm run doctor` (§10)
+- [x] `docker-compose.yml` definitivo: Floci con la configuración A1, perfiles `ui` y `mail`, y Terraform en contenedor
+- [x] `.env.example` y `.terraform-version`
 - [ ] Hook de pre-commit con `gitleaks`
 - [ ] `ci.yml` con los jobs `changes`, `lint` (con `gitleaks`) y `unit`
 - [ ] Primer PR con la CI en verde
