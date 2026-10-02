@@ -1,0 +1,12 @@
+{
+  "name": "@reservas/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@reservas/shared": "workspace:*"
+  }
+}

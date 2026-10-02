@@ -24,8 +24,8 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 
 ## Estado actual
 - Hecho: la fase F0 (spike de Floci en `spikes/f0-floci/`), verificada en Windows y en el runner de GitHub (workflow `spike-f0`).
-- Próximo: F1, la base del monorepo.
-- Todavía no existe el monorepo. La estructura prevista está en SPEC §1.5 y §6.5:
+- En curso: F1, la base del monorepo. Ya existe el esqueleto de los paquetes; su contenido llega en F2 a F5.
+- La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)
   services/api/      Lambdas: handlers/, domain/, services/, repositories/, infra/
@@ -35,7 +35,19 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
   ```
 
 ## Comandos
-Por ahora solo existe el spike (ver la sección "Cómo reproducirlo" en `docs/spikes/floci.md`). Los comandos del monorepo (`npm run doctor`, `pnpm local:up`, `pnpm test`, etc.) se definen en SPEC §10.1 y se agregan a esta sección a medida que existan.
+pnpm se habilita con `corepack enable`, que lee la versión del campo `packageManager`.
+
+| Comando | Qué hace |
+|---|---|
+| `pnpm install` | Instala las dependencias del monorepo |
+| `pnpm typecheck` | `tsc --noEmit` en cada paquete |
+| `pnpm lint` | ESLint en todo el repo |
+| `pnpm format` / `pnpm format:check` | Formatea con Prettier, o solo verifica el formato |
+| `pnpm test` | Tests unitarios (Vitest) de cada paquete |
+
+- El resto de los comandos (`npm run doctor`, `pnpm local:up`, etc.) están definidos en SPEC §10.1 y se agregan a esta tabla a medida que existan.
+- Para el spike F0, ver la sección "Cómo reproducirlo" en `docs/spikes/floci.md`.
+- **pnpm aplica `minimumReleaseAge`:** rechaza versiones publicadas hace muy poco, como protección contra la cadena de suministro. Si una instalación falla por eso, se usa una versión anterior. **No** se agregan excepciones (`minimumReleaseAgeExclude`) sin aprobación.
 
 ## Convenciones
 
@@ -44,7 +56,7 @@ Por ahora solo existe el spike (ver la sección "Cómo reproducirlo" en `docs/sp
 - **En inglés:** identificadores de código (variables, funciones, tipos, archivos, tablas y columnas), códigos de error (`SLOT_TAKEN`) y nombres de recursos de infra.
 
 ### Git
-- **Una rama y un PR por tarea** de `docs/TASKS.md`. La rama sale de `main` con un prefijo según el tipo: `feat/`, `fix/`, `chore/`, `docs/`, `test/` o `refactor/`. Ejemplo: `feat/doctor-script`.
+- **Una rama y un PR por tarea** de `docs/TASKS.md`, **o por un grupo chico de tareas relacionadas de la misma fase** cuando por separado no se pueden probar o serían triviales. El PR indica qué tareas cubre. La rama sale de `main` con un prefijo según el tipo: `feat/`, `fix/`, `chore/`, `docs/`, `test/` o `refactor/`. Ejemplo: `feat/doctor-script`.
 - Nunca commitear directo a `main`. Se mergea solo con la CI en verde.
 - **Commits con Conventional Commits** y la descripción en español: `tipo(alcance): descripción`. Ejemplo: `feat(api): validar alineación de turnos`.
   - Alcances habituales: `api`, `web`, `shared`, `infra`, `ci`, `docs` y `spike`.
