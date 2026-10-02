@@ -1,5 +1,5 @@
 # Entorno local (SPEC §10). Base: `docker compose up -d floci`
-# Opcionales: `--profile ui` (Floci UI) y `--profile mail` (Mailpit).
+# Opcional: `--profile ui` (Floci UI, con la bandeja de emails de SES).
 name: reservas
 
 services:
@@ -13,10 +13,6 @@ services:
       FLOCI_SERVICES_DOCKER_NETWORK: floci-net
       FLOCI_SERVICES_RDS_ENDPOINT_HOST: floci
       FLOCI_SECURITY_ALLOW_PRIVATE_JWT_TARGETS: "true"
-      # Reenvío de emails a Mailpit. Si Mailpit no está levantado, Floci solo registra el fallo
-      # y los emails siguen disponibles en /_aws/ses.
-      FLOCI_SERVICES_SES_SMTP_HOST: mailpit
-      FLOCI_SERVICES_SES_SMTP_PORT: "1025"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
@@ -34,15 +30,6 @@ services:
       AWS_SECRET_ACCESS_KEY: test
     depends_on:
       - floci
-    networks:
-      - floci-net
-
-  mailpit:
-    image: axllent/mailpit:v1.31.3
-    profiles: ["mail"]
-    ports:
-      - "8025:8025" # interfaz web
-      - "1025:1025" # SMTP
     networks:
       - floci-net
 

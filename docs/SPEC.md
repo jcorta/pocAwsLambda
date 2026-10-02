@@ -142,7 +142,7 @@ Los códigos de error (`SLOT_TAKEN`, etc.) son identificadores estables que se d
 - **Dado** un fallo temporal al enviar, **entonces** el mensaje se reintenta, y tras 3 intentos fallidos pasa a una dead-letter queue (DLQ) para inspección.
 - **Dado** un mismo evento entregado más de una vez, **entonces** el email no debe duplicarse. *(Idempotencia por id de evento, ver §3.)*
 
-> **Cómo se prueba en local:** Floci no entrega los emails, los guarda en memoria. Los tests verifican el envío con `GET http://localhost:4566/_aws/ses`, y antes de cada suite vacían la bandeja con `DELETE /_aws/ses`. Los tests **no** dependen de Mailpit (ver §10).
+> **Cómo se prueba en local:** Floci no entrega los emails, los guarda en memoria. Los tests verifican el envío con `GET http://localhost:4566/_aws/ses`, y antes de cada suite vacían la bandeja con `DELETE /_aws/ses`. Para ver los emails a mano está la bandeja de SES de Floci UI (ver §10).
 
 > **Usuarios en local y CI:** el seed y los tests crean usuarios ya confirmados, sin depender del email con el código de verificación:
 > - `AdminCreateUser` con `MessageAction=SUPPRESS` (sin email de invitación) y `email_verified=true`.
@@ -875,19 +875,18 @@ Decisiones de base:
     - Docker Compose v2 (`docker compose version`).
     - Acceso al socket de Docker desde un contenedor: lanza un contenedor efímero que monta `/var/run/docker.sock` y ejecuta `docker version`.
     - Puertos libres: 4566 (Floci), 7001-7010 (RDS) y 3000 (web en desarrollo).
-  - **Chequeos opcionales** (solo advertencias): puertos 4500 (Floci UI), 8025 y 1025 (Mailpit), AWS CLI instalada, y al menos 4 GB de memoria asignados a Docker.
+  - **Chequeos opcionales** (solo advertencias): puerto 4500 (Floci UI), AWS CLI instalada, al menos 4 GB de memoria asignados a Docker, y que `.terraform-version` coincida con la imagen de Terraform del compose.
   - **Salida:** una línea por chequeo con ✔, ⚠ o ✖. Cada falla incluye una sugerencia concreta para resolverla (qué instalar o qué proceso ocupa el puerto).
   - El comando que levanta el entorno (por ejemplo `pnpm local:up`) ejecuta `doctor` antes de arrancar y se detiene si falla algún chequeo obligatorio.
-- **Floci UI es opcional**, va en un perfil de docker compose y queda disponible en `http://localhost:4500`. Al implementar, verificar si muestra los emails de SES; si los muestra, se evalúa quitar Mailpit.
-- **Mailpit es opcional**, va en un perfil aparte de docker compose (por ejemplo `docker compose --profile mail up`). Si está levantado, Floci le reenvía los emails por SMTP (`FLOCI_SERVICES_SES_SMTP_HOST=mailpit`, puerto 1025) y se ven en `http://localhost:8025`. Si no está, todo funciona igual: los emails quedan en `/_aws/ses` y Floci solo registra en el log el fallo del reenvío.
-- El entorno base (Floci, la app y los tests) no requiere Mailpit.
+- **Floci UI es opcional**, va en el perfil `ui` de docker compose y queda disponible en `http://localhost:4500`. Sirve para explorar los recursos emulados e incluye **la bandeja de emails de SES**, que es la forma de ver los emails a mano (verificado en F1).
+- **Mailpit se descartó** (decisión de F1): duplicaba la bandeja de Floci UI. Los tests no lo necesitaban, porque usan `/_aws/ses`.
 
 ### 10.1 Comandos
 | Comando | Qué hace |
 |---|---|
 | `npm run doctor` | Verifica los prerequisitos (ver arriba) |
 | `pnpm install` | Instala las dependencias del monorepo |
-| `pnpm local:up [--ui] [--mail]` | `doctor`, levanta Floci (y opcionalmente Floci UI y Mailpit), construye, ejecuta `terraform apply` en `envs/local`, migra, carga el seed y genera `apps/web/public/config.json`. Al final imprime las URLs y las credenciales de prueba. Es idempotente: se puede volver a correr. La primera vez tarda unos 2 minutos, porque crear la instancia RDS lleva unos 90 s (hallazgo A7) |
+| `pnpm local:up [--ui]` | `doctor`, levanta Floci (y opcionalmente Floci UI), construye, ejecuta `terraform apply` en `envs/local`, migra, carga el seed y genera `apps/web/public/config.json`. Al final imprime las URLs y las credenciales de prueba. Es idempotente: se puede volver a correr. La primera vez tarda unos 2 minutos, porque crear la instancia RDS lleva unos 90 s (hallazgo A7) |
 | `pnpm dev` | Levanta `next dev` en `:3000` contra la API de Floci, con recarga en caliente del frontend |
 | `pnpm deploy:local` | Reconstruye las Lambdas y aplica Terraform. Es el ciclo rápido después de cambiar el código del backend |
 | `pnpm deploy:web:local` | Construye el export estático y lo sube al bucket de Floci |
@@ -911,7 +910,6 @@ Decisiones de base:
 | 4566 | Floci (todas las APIs de AWS) |
 | 3000 | `next dev` |
 | 4500 | Floci UI (opcional) |
-| 8025 / 1025 | Mailpit, interfaz web y SMTP (opcional) |
 | 7001–7010 | Proxy de RDS de Floci. La primera instancia usa el 7001 |
 
 ---
@@ -966,7 +964,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 | **F1 Base del monorepo** | Workspaces de pnpm, TS, ESLint y Prettier, Vitest, `doctor`, `docker-compose.yml`, `ci.yml` con `lint` y `unit` | `npm run doctor` y `pnpm test` pasan, y la CI corre en los PR |
 | **F2 Dominio y base de datos** | Esquema de Drizzle y migraciones (incluida la exclusion constraint), dominio puro, repositorios, servicios, tests de integración con concurrencia | Casos de §8.2 (dominio e integración) en verde. Cobertura del dominio ≥ 90 % |
 | **F3 API e infra** | Módulos `network`, `database`, `auth` y `api`, Lambdas `me`, `resources`, `bookings`, `admin` y `migrator`, seed, `local:up`, E2E API, job `e2e-local` | Flujo de reserva completo por API en Floci, en local y en CI |
-| **F4 Notificaciones** | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email, perfiles de Mailpit y Floci UI | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |
+| **F4 Notificaciones** | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |
 | **F5 Frontend** | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
 | **F6 Endurecimiento** | `terraform test`, umbrales de cobertura, `envs/aws` e `infra/bootstrap` completos (sin aplicar), `deploy-aws.yml` deshabilitado, README con guía de inicio | Un desarrollador nuevo levanta todo con `npm run doctor`, `pnpm install` y `pnpm local:up` siguiendo solo el README |
 | **F7 Migración a AWS** (opcional) | Pasos de §11.1 | Smoke tests en verde en AWS real |
