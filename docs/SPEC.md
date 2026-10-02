@@ -961,7 +961,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 | Fase | Contenido | Definición de terminado |
 |---|---|---|
 | **F0 Spike de viabilidad en Floci** ✔ *(completa: Windows y runner de GitHub)* | docker compose con Floci. Terraform mínimo: Cognito, HTTP API con JWT authorizer, una Lambda Node 22 que consulta RDS (`SELECT 1`), publica en SQS y envía por SES, y un bucket S3 con website | Los 7 puntos de §7.6 verificados en Windows y en el runner de GitHub. Resultados en `docs/spikes/floci.md` y la spec ajustada si algo no funciona |
-| **F1 Base del monorepo** | Workspaces de pnpm, TS, ESLint y Prettier, Vitest, `doctor`, `docker-compose.yml`, `ci.yml` con `lint` y `unit` | `npm run doctor` y `pnpm test` pasan, y la CI corre en los PR |
+| **F1 Base del monorepo** ✔ | Workspaces de pnpm, TS, ESLint y Prettier, Vitest, `doctor`, `docker-compose.yml`, `ci.yml` con `lint` y `unit` | `npm run doctor` y `pnpm test` pasan, y la CI corre en los PR |
 | **F2 Dominio y base de datos** | Esquema de Drizzle y migraciones (incluida la exclusion constraint), dominio puro, repositorios, servicios, tests de integración con concurrencia | Casos de §8.2 (dominio e integración) en verde. Cobertura del dominio ≥ 90 % |
 | **F3 API e infra** | Módulos `network`, `database`, `auth` y `api`, Lambdas `me`, `resources`, `bookings`, `admin` y `migrator`, seed, `local:up`, E2E API, job `e2e-local` | Flujo de reserva completo por API en Floci, en local y en CI |
 | **F4 Notificaciones** | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |

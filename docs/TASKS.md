@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ◐ · F2 ☐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ☐ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -17,7 +17,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Repo privado en GitHub con `main` sincronizada
 - [x] Workflow que ejecuta el spike en `ubuntu-latest` y verificarlo en verde (29/29, [run 37043661160](https://github.com/jcorta/pocAwsLambda/actions/runs/37043661160))
 
-## [ ] F1 — Base del monorepo
+## [x] F1 — Base del monorepo
 > Terminado cuando: `npm run doctor` y `pnpm test` pasan, y la CI corre en los PR.
 
 - [x] `package.json` raíz con `packageManager` (pnpm) y `engines`, `pnpm-workspace.yaml` y `.nvmrc`
@@ -29,8 +29,8 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] `docker-compose.yml` definitivo: Floci con la configuración A1, perfil `ui` (Floci UI) y Terraform en contenedor
 - [x] `.env.example` y `.terraform-version`
 - [x] Hook de pre-commit con `gitleaks`
-- [ ] `ci.yml` con los jobs `changes`, `lint` (con `gitleaks`) y `unit`
-- [ ] Primer PR con la CI en verde
+- [x] `ci.yml` con los jobs `changes`, `lint` (con `gitleaks`) y `unit`
+- [x] Primer PR con la CI en verde (#7)
 
 ## [ ] F2 — Dominio y base de datos
 > Terminado cuando: los casos de §8.2 de dominio e integración están en verde, con cobertura del dominio ≥ 90 %.

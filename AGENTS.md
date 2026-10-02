@@ -24,7 +24,8 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 
 ## Estado actual
 - Hecho: la fase F0 (spike de Floci en `spikes/f0-floci/`), verificada en Windows y en el runner de GitHub (workflow `spike-f0`).
-- En curso: F1, la base del monorepo. Ya existe el esqueleto de los paquetes; su contenido llega en F2 a F5.
+- Hecho: F1, la base del monorepo (pnpm, TypeScript, lint, tests, `doctor`, compose, hook de gitleaks y CI). Los paquetes son esqueletos; su contenido llega en F2 a F5.
+- Próximo: F2, dominio y base de datos.
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)
@@ -52,6 +53,15 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 
 - El resto de los comandos (`npm run doctor`, `pnpm local:up`, etc.) están definidos en SPEC §10.1 y se agregan a esta tabla a medida que existan.
 - Para el spike F0, ver la sección "Cómo reproducirlo" en `docs/spikes/floci.md`.
+
+## CI (GitHub Actions)
+- **`ci.yml`** corre en cada PR y en cada push a `main`. Jobs:
+  - `changes`: detecta si el cambio toca algo más que `docs/` y `*.md`.
+  - `lint`: ESLint, Prettier, typecheck, `terraform fmt` y gitleaks sobre los commits del PR.
+  - `unit`: tests unitarios.
+- **`spike-f0.yml`** corre el spike de Floci cuando cambia `spikes/f0-floci/**`, o a mano.
+- **Un job nuevo que sea pesado** (integración, build, E2E) se condiciona con `if: needs.changes.outputs.code == 'true'`, así se saltea en los PRs que solo tocan documentación sin quedar pendiente.
+- **Antes de pedir un merge**, la CI del PR tiene que estar en verde. Se sigue con `gh pr checks <n> --watch`.
 - **Hook de pre-commit (Lefthook):** `pnpm install` lo instala con el script `prepare`; si no quedó instalado, se corre `pnpm run prepare`. Ejecuta gitleaks sobre lo que está por commitearse, así que **commitear requiere Docker corriendo**. Si Docker no está disponible, el hook falla y bloquea el commit: es intencional.
 - **pnpm bloquea los scripts de instalación de las dependencias.** Cada excepción se declara en `allowBuilds` (`pnpm-workspace.yaml`) y requiere aprobación. Por ahora la única entrada es `lefthook: false`: su script no hace falta, porque los hooks los instala `prepare`.
 - **pnpm aplica `minimumReleaseAge`:** rechaza versiones publicadas hace muy poco, como protección contra la cadena de suministro. Si una instalación falla por eso, se usa una versión anterior. **No** se agregan excepciones (`minimumReleaseAgeExclude`) sin aprobación.
