@@ -11,6 +11,7 @@
     "doctor": "node scripts/doctor.mjs",
     "secrets:staged": "node scripts/gitleaks.mjs --staged",
     "secrets:history": "node scripts/gitleaks.mjs --all",
+    "build": "pnpm -r --if-present build",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

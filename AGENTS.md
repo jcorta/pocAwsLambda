@@ -50,6 +50,8 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm lint` | ESLint en todo el repo |
 | `pnpm format` / `pnpm format:check` | Formatea con Prettier, o solo verifica el formato |
 | `pnpm test` | Tests unitarios (Vitest) de cada paquete |
+| `pnpm build` | Bundles de las Lambdas con esbuild en `services/api/dist/lambdas/<nombre>/` |
+| `pnpm --filter @reservas/api check:bundles` | Carga cada bundle y verifica que las Lambdas de la API respondan 401 sin ID token (detecta problemas de ESM o CommonJS) |
 | `pnpm test:integration` | Tests de integración contra Postgres 16 real (Testcontainers). **Requiere Docker** |
 | `pnpm --filter @reservas/api db:generate` | Genera una migración SQL a partir de los cambios en `src/infra/db/schema.ts`. Lo que Drizzle no expresa (exclusion constraints, extensiones, datos) va en una migración manual (`drizzle-kit generate --custom`) |
 | `pnpm secrets:staged` / `pnpm secrets:history` | gitleaks (en Docker) sobre lo que está por commitearse, o sobre todo el historial |
@@ -98,6 +100,10 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - `createLambdaHandler` resuelve el actor (con `token_use = id`), aplica `requireAdmin`, rutea y convierte las excepciones en `500 INTERNAL_ERROR`.
   - Los handlers solo validan con Zod (`parseBody`, `parseQuery` y `pathId`), llaman al servicio y serializan con `serializers.ts`. La lógica va en los servicios.
   - Un `{id}` que no es UUID responde 404 sin consultar la base.
+- **Entrypoints** (`src/lambdas/<nombre>.ts`):
+  - Cada uno importa **solo** las rutas de su dominio, para que el bundle no incluya los demás. Nunca importar `handlers/routes/index.ts` desde un entrypoint.
+  - Las dependencias (pool de pg con `max: 1` y secreto de la DB) se crean una vez por contenedor con `lazyServiceDeps`, que reintenta si la inicialización falla.
+  - Los clientes del AWS SDK se crean **sin endpoint**.
 - **Repositorios** (`src/repositories`): aceptan `DbOrTx`, así funcionan dentro o fuera de una transacción. Las fechas se convierten en el borde con `toDate` y `toInstant`.
 - **Cobertura:** `pnpm test` en `services/api` mide la cobertura y falla si `src/domain/**` baja del 90 % de líneas. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
 - **Las reglas de concurrencia viven en la base de datos**: exclusion constraint y `FOR UPDATE` (SPEC §3.3). No reemplazarlas por chequeos en código.

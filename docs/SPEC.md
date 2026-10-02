@@ -565,8 +565,9 @@ services/api/src/
 packages/shared/   Esquemas Zod, tipos y códigos de error compartidos con el frontend
 ```
 - **Conexión a la DB:** un `pg.Pool` con `max: 1`, creado fuera del handler para reutilizarlo entre invocaciones en caliente. `statement_timeout` de 5 s. Las credenciales se leen de Secrets Manager en el arranque en frío y quedan en cache. En AWS real, RDS Proxy queda como mejora (§11).
-- **Empaquetado:** `esbuild` genera un bundle por Lambda (un zip). Runtime Node.js 22. Arquitectura configurable por variable (`x86_64` por defecto, por compatibilidad local).
-- **Configuración:** por variables de entorno que define Terraform: `APP_TIMEZONE`, `DB_SECRET_ARN`, `NOTIFICATIONS_QUEUE_URL` y `SES_FROM`. CORS no es una variable de las Lambdas: lo resuelve API Gateway (§4.1).
+- **Empaquetado:** `pnpm build` genera con `esbuild` un bundle ESM minificado por Lambda en `services/api/dist/lambdas/<nombre>/index.mjs`. El del `migrator` lleva además la carpeta `migrations/`. Cada entrypoint importa solo las rutas de su dominio. El zip lo arma Terraform (§7.4). Runtime Node.js 22. Arquitectura configurable por variable (`x86_64` por defecto, por compatibilidad local).
+- **Configuración:** por variables de entorno que define Terraform: `APP_TIMEZONE`, `DB_SECRET_ARN`, `DB_SSL`, `NOTIFICATIONS_QUEUE_URL` y `SES_FROM`.
+  - `DB_SSL` vale `disable` en Floci y `require` en AWS (TLS sin verificar la CA), porque RDS PostgreSQL 15+ exige TLS por defecto (`rds.force_ssl`). CORS no es una variable de las Lambdas: lo resuelve API Gateway (§4.1).
 - **Clientes de AWS:** se crean sin endpoint explícito. En Floci, el SDK toma `AWS_ENDPOINT_URL`, que Floci inyecta en cada Lambda; en AWS, usa los endpoints estándar.
   - **SQS:** el cliente se crea con `useQueueUrlAsEndpoint: false` (hallazgo A2). Si no, el SDK envía al host de la `QueueUrl` (`localhost:4566`), que dentro del contenedor de la Lambda no es Floci. En AWS no cambia nada.
 - **Logs:** JSON estructurado (Powertools for AWS Lambda: Logger), con `requestId`, `userId`, ruta y duración. Nunca se registran tokens ni contraseñas.
@@ -695,7 +696,7 @@ provider "aws" {
   - Un rol IAM por Lambda, con los permisos de §6.7.
   - Log groups con retención de 14 días.
   - Event source mapping SQS → `notifier` con `ReportBatchItemFailures`.
-  - Los zips **los construye el build** (`pnpm build`, que deja `dist/lambdas/<nombre>.zip`). Terraform solo los referencia, con `source_code_hash`.
+  - El código **lo construye el build** (`pnpm build`, que deja `services/api/dist/lambdas/<nombre>/`). Terraform comprime cada carpeta con `archive_file` (provider `hashicorp/archive`) y la referencia con `source_code_hash`. Así no hace falta una librería de zip en el build.
 - **frontend:**
   - Bucket S3 con website hosting en local, y bucket privado con CloudFront (OAC) en AWS.
   - El objeto `config.json` se genera con los outputs de los otros módulos (§5.2).

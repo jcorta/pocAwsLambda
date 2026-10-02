@@ -115,3 +115,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+      # Bundles de las Lambdas: se generan y se verifica que carguen (SPEC §6.5)
+      - run: pnpm build
+      - run: pnpm --filter @reservas/api check:bundles

@@ -15,6 +15,9 @@ export default defineConfig({
         "src/repositories/**",
         "src/services/**",
         "src/handlers/routes/**",
+        // Entrypoints y acceso a Secrets Manager: se prueban con check:bundles y los E2E en Floci
+        "src/lambdas/**",
+        "src/infra/runtime.ts",
       ],
       reporter: ["text-summary", "text"],
       // SPEC §8.4: el dominio exige 90 % de líneas. El umbral total de la API (80 %) se aplica en F6.

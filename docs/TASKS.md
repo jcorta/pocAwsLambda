@@ -51,9 +51,9 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 
 - [x] `packages/shared`: esquemas Zod, tipos y catálogo de errores (§4.3)
 - [x] Capa de handlers: router por `routeKey`, parser de roles (array o string), chequeo de `token_use = id` y mapeo de errores (además: handlers de las 12 rutas, listados paginados por cursor)
-- [ ] Lambdas `me`, `resources`, `bookings` y `admin`
-- [ ] Lambda `migrator`
-- [ ] Build con esbuild a `dist/lambdas/<nombre>.zip`
+- [x] Lambdas `me`, `resources`, `bookings` y `admin`
+- [x] Lambda `migrator`
+- [x] Build con esbuild a `dist/lambdas/<nombre>/` (el zip lo arma Terraform con `archive_file`), con smoke test de los bundles
 - [ ] Módulos de Terraform `network`, `database`, `auth` y `api`
 - [ ] Root `infra/envs/local`: provider de Floci, `api_url` y `cognito_issuer_url`
 - [ ] Seed: usuarios de Cognito, `settings` y recursos de ejemplo
