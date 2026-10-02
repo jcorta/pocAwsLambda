@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ☐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ◐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -49,8 +49,8 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 ## [ ] F3 — API e infraestructura
 > Terminado cuando: el flujo de reserva completo funciona por API en Floci, en local y en CI.
 
-- [ ] `packages/shared`: esquemas Zod, tipos y catálogo de errores (§4.3)
-- [ ] Capa de handlers: router por `routeKey`, parser de roles (array o string), chequeo de `token_use = id` y mapeo de errores
+- [x] `packages/shared`: esquemas Zod, tipos y catálogo de errores (§4.3)
+- [x] Capa de handlers: router por `routeKey`, parser de roles (array o string), chequeo de `token_use = id` y mapeo de errores (además: handlers de las 12 rutas, listados paginados por cursor)
 - [ ] Lambdas `me`, `resources`, `bookings` y `admin`
 - [ ] Lambda `migrator`
 - [ ] Build con esbuild a `dist/lambdas/<nombre>.zip`
@@ -58,7 +58,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [ ] Root `infra/envs/local`: provider de Floci, `api_url` y `cognito_issuer_url`
 - [ ] Seed: usuarios de Cognito, `settings` y recursos de ejemplo
 - [ ] Comandos `local:up`, `deploy:local`, `local:logs`, `local:down` y `local:reset`
-- [ ] Tests unitarios de handlers
+- [x] Tests unitarios de handlers (más 19 tests de integración de la pila completa, que validan las respuestas contra el contrato)
 - [ ] Test de consistencia entre las rutas de Terraform y los handlers
 - [ ] E2E de la API: auth, reservas, límites y cancelación
 - [ ] Jobs `build` y `e2e-local` en la CI

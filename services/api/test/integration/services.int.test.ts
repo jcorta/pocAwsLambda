@@ -317,7 +317,8 @@ describe("getAvailability (CU-03)", () => {
 describe("settings (CU-09)", () => {
   it("valida y aplica los cambios a las operaciones siguientes", async () => {
     const original = await readSettings(deps);
-    expect(original).toEqual({ maxActiveBookingsPerUser: 3, cancellationMinHours: 2, bookingHorizonDays: 30 });
+    expect(original).toMatchObject({ maxActiveBookingsPerUser: 3, cancellationMinHours: 2, bookingHorizonDays: 30 });
+    expect(original.updatedAt).toBeInstanceOf(Date);
 
     expect(await changeSettings(deps, { ...original, maxActiveBookingsPerUser: 0 })).toMatchObject({
       code: "VALIDATION_ERROR",

@@ -5,11 +5,11 @@ import { resourceOpeningHours, resources } from "../infra/db/schema.ts";
 
 export interface ResourceInput {
   name: string;
-  description?: string | null;
-  attributes?: Record<string, unknown>;
+  description?: string | null | undefined;
+  attributes?: Record<string, unknown> | undefined;
   slotMinutes: number;
   openingHours: OpeningHours[];
-  isActive?: boolean;
+  isActive?: boolean | undefined;
 }
 
 export interface Resource {

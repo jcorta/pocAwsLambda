@@ -9,13 +9,16 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@aws-lambda-powertools/logger": "^2.35.0",
     "@reservas/shared": "workspace:*",
     "drizzle-orm": "^0.45.3",
     "pg": "^8.23.1",
-    "temporal-polyfill": "^1.0.5"
+    "temporal-polyfill": "^1.0.5",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.2.0",
+    "@types/aws-lambda": "^8.10.164",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.11",
     "testcontainers": "^12.2.0"

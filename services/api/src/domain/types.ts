@@ -1,8 +1,9 @@
 // Tipos del dominio. No dependen de la base de datos ni de AWS.
-import type { ErrorCode } from "@reservas/shared";
+import { SLOT_MINUTES, type ErrorCode } from "@reservas/shared";
 import type { Temporal } from "temporal-polyfill";
 
-export const SLOT_MINUTES = [15, 30, 45, 60, 90, 120] as const;
+// Definido una sola vez en el contrato (@reservas/shared)
+export { SLOT_MINUTES };
 export type SlotMinutes = (typeof SLOT_MINUTES)[number];
 
 /** Día de semana ISO: 1 = lunes … 7 = domingo. */

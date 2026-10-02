@@ -7,7 +7,15 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/infra/db/**"],
+      // Lo que depende de la base se cubre con los tests de integración
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/__fixtures__/**",
+        "src/infra/db/**",
+        "src/repositories/**",
+        "src/services/**",
+        "src/handlers/routes/**",
+      ],
       reporter: ["text-summary", "text"],
       // SPEC §8.4: el dominio exige 90 % de líneas. El umbral total de la API (80 %) se aplica en F6.
       thresholds: {
