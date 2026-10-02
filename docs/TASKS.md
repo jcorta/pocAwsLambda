@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ◐ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ☐ · F5 ☐ · F6 ☐ · F7 ☐
 
 ---
 
@@ -46,7 +46,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Tests de integración: migraciones, concurrencia RN-01 (20 usuarios) y RN-05 (6 de 3), RN-08 y "cancelar libera el turno" (37 tests; los del notifier van en F4)
 - [x] Job `integration` en la CI
 
-## [ ] F3 — API e infraestructura
+## [x] F3 — API e infraestructura
 > Terminado cuando: el flujo de reserva completo funciona por API en Floci, en local y en CI.
 
 - [x] `packages/shared`: esquemas Zod, tipos y catálogo de errores (§4.3)
@@ -60,8 +60,8 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Comandos `local:up`, `deploy:local`, `local:logs`, `local:down` y `local:reset` (además: `local:seed`)
 - [x] Tests unitarios de handlers (más 19 tests de integración de la pila completa, que validan las respuestas contra el contrato)
 - [x] Test de consistencia entre las rutas de Terraform y los handlers
-- [ ] E2E de la API: auth, reservas, límites y cancelación
-- [ ] Jobs `build` y `e2e-local` en la CI
+- [x] E2E de la API: auth, reservas, límites y cancelación (12 tests)
+- [x] Jobs `build` y `e2e-local` en la CI (el build corre dentro de `unit` y de `e2e-local`; el job `build` con artifacts va en F6)
 
 ## [ ] F4 — Notificaciones
 > Terminado cuando: el E2E verifica en `/_aws/ses` los emails de confirmación y de cancelación.
@@ -95,6 +95,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [ ] `infra/envs/aws` e `infra/bootstrap` completos, sin aplicar
 - [ ] Access logs del stage `$default` de API Gateway (SPEC §7.4), verificando que Floci los acepte
 - [ ] `deploy-aws.yml` preparado y deshabilitado
+- [ ] Job `build` que sube los bundles como artifacts para `deploy-aws.yml` (requiere aprobar `actions/upload-artifact` y `download-artifact`)
 - [ ] README con guía de inicio, verificada en una máquina limpia
 - [ ] Checklist para hacer público el repo (§9.3)
 

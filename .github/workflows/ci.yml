@@ -1,5 +1,5 @@
-# CI de cada PR y de main (SPEC §9.1). Por ahora: changes, lint, integration y unit.
-# Los jobs infra-test, build y e2e-local se agregan en F3 a F6.
+# CI de cada PR y de main (SPEC §9.1): changes, lint, unit, integration y e2e-local.
+# El job infra-test (terraform test) se agrega en F6.
 name: ci
 
 on:
@@ -98,6 +98,41 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
+
+  # E2E de punta a punta contra Floci: el mismo `pnpm local:up` que en una máquina de desarrollo.
+  # Compila por su cuenta en lugar de descargar artifacts (decisión de F3; los artifacts llegan en F6).
+  e2e-local:
+    needs: [changes, lint, unit, integration]
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - name: Levantar el entorno local (Floci, Terraform, migraciones y seed)
+        run: pnpm local:up
+      - name: E2E de la API
+        run: pnpm test:e2e
+
+      - name: Logs de Floci y de las Lambdas (si falló)
+        if: failure()
+        run: |
+          pnpm local:logs || true
+          for fn in me resources bookings admin migrator; do echo "::group::$fn"; pnpm local:logs "$fn" || true; echo "::endgroup::"; done
+
+      - name: Bajar el entorno
+        if: always()
+        run: pnpm local:reset
 
   unit:
     runs-on: ubuntu-latest

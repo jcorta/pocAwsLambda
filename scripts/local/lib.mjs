@@ -48,6 +48,15 @@ export function terraform(args, opts) {
   return compose(["run", "--rm", "-T", "terraform", `-chdir=${TF_DIR}`, ...args], opts);
 }
 
+/**
+ * Borra archivos que generó Terraform (state, zips). En Linux el contenedor de Terraform corre como root y
+ * esos archivos quedan a su nombre, así que se borran desde el mismo contenedor y no con fs.rmSync.
+ * Las rutas son relativas a la raíz del repo, con "/".
+ */
+export function removeTerraformFiles(paths) {
+  compose(["run", "--rm", "-T", "--no-deps", "--entrypoint", "rm", "terraform", "-rf", ...paths], { capture: true });
+}
+
 /** Outputs de Terraform como objeto plano (`terraform output -json`). */
 export function terraformOutputs() {
   const { stdout } = terraform(["output", "-json"], { capture: true });
