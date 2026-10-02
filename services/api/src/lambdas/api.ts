@@ -6,10 +6,11 @@ import type { ApiLambdaName } from "../handlers/routes/index.ts";
 import { lazyServiceDeps } from "../infra/runtime.ts";
 
 export function apiLambda(name: ApiLambdaName, routes: Routes) {
+  const logger = new Logger({ serviceName: `reservas-${name}` });
   return createLambdaHandler({
     routes,
-    getDeps: lazyServiceDeps(),
-    logger: new Logger({ serviceName: `reservas-${name}` }),
+    getDeps: lazyServiceDeps(process.env, logger),
+    logger,
     requireAdmin: name === "admin",
   });
 }

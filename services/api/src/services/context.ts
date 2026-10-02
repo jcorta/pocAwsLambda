@@ -2,6 +2,7 @@
 import type { Temporal } from "temporal-polyfill";
 import type { RuleFailure } from "../domain/types.ts";
 import type { Db } from "../infra/db/client.ts";
+import type { PublishEvent } from "../notifications/event.ts";
 
 export interface ServiceDeps {
   db: Db;
@@ -9,7 +10,12 @@ export interface ServiceDeps {
   now: () => Temporal.Instant;
   /** APP_TIMEZONE (SPEC §2.2). */
   timezone: string;
+  /** Publica los eventos de reserva en SQS después del commit (SPEC §6.3). En los tests, un colector. */
+  publishEvent: PublishEvent;
 }
+
+/** Para los tests y las Lambdas que no publican eventos. */
+export const noPublish: PublishEvent = async () => {};
 
 /** Quién ejecuta la operación, tomado de los claims del token (SPEC §6.2). */
 export interface Actor {

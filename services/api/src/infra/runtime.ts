@@ -1,10 +1,12 @@
 // Recursos compartidos de una Lambda, creados una vez por contenedor y reutilizados en caliente (SPEC §6.5).
+import { Logger } from "@aws-lambda-powertools/logger";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import pg from "pg";
 import { Temporal } from "temporal-polyfill";
-import type { ServiceDeps } from "../services/context.ts";
+import { noPublish, type ServiceDeps } from "../services/context.ts";
 import { readConfig, type LambdaConfig } from "./config.ts";
 import { createDb } from "./db/client.ts";
+import { sqsPublisher } from "./notifications.ts";
 
 interface DbCredentials {
   host: string;
@@ -41,13 +43,22 @@ export async function createPool(config: LambdaConfig, max = 1): Promise<pg.Pool
  * Devuelve una función que resuelve las dependencias de los servicios una sola vez por contenedor.
  * Si la inicialización falla (por ejemplo, el secreto no está disponible), se reintenta en la siguiente invocación.
  */
-export function lazyServiceDeps(env: NodeJS.ProcessEnv = process.env): () => Promise<ServiceDeps> {
+export function lazyServiceDeps(
+  env: NodeJS.ProcessEnv = process.env,
+  logger: Logger = new Logger(),
+): () => Promise<ServiceDeps> {
   let pending: Promise<ServiceDeps> | undefined;
   return () => {
     pending ??= (async () => {
       const config = readConfig(env);
       const pool = await createPool(config);
-      return { db: createDb(pool), now: () => Temporal.Now.instant(), timezone: config.timezone };
+      return {
+        db: createDb(pool),
+        now: () => Temporal.Now.instant(),
+        timezone: config.timezone,
+        // Solo `bookings` tiene la cola configurada (es la única que publica, SPEC §6.7)
+        publishEvent: config.notificationsQueueUrl ? sqsPublisher(config.notificationsQueueUrl, logger) : noPublish,
+      };
     })().catch((err: unknown) => {
       pending = undefined;
       throw err;

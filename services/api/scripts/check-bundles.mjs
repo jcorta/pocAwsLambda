@@ -21,7 +21,7 @@ const unauthenticated = {
 process.env["DB_SECRET_ARN"] ??= "arn:aws:secretsmanager:us-east-1:000000000000:secret:check";
 process.env["POWERTOOLS_LOG_LEVEL"] ??= "SILENT";
 
-for (const name of [...API_LAMBDAS, "migrator"]) {
+for (const name of [...API_LAMBDAS, "migrator", "notifier"]) {
   const file = join(root, "dist", "lambdas", name, "index.mjs");
   try {
     const mod = await import(pathToFileURL(file).href);
@@ -29,7 +29,7 @@ for (const name of [...API_LAMBDAS, "migrator"]) {
     if (API_LAMBDAS.includes(name)) {
       const res = await mod.handler(unauthenticated, { awsRequestId: "check" });
       if (res.statusCode !== 401) throw new Error(`esperaba 401 sin ID token, respondió ${res.statusCode}`);
-    } else {
+    } else if (name === "migrator") {
       await access(join(root, "dist", "lambdas", name, "migrations", "meta", "_journal.json"));
     }
     console.log(`✔ ${name}`);

@@ -17,7 +17,7 @@ import { ADMIN_CLAIMS, bodyOf, httpEvent, type EventOptions } from "../../src/ha
 import { createLambdaHandler } from "../../src/handlers/router.ts";
 import { LAMBDA_ROUTES, type ApiLambdaName } from "../../src/handlers/routes/index.ts";
 import { createDb } from "../../src/infra/db/client.ts";
-import type { ServiceDeps } from "../../src/services/context.ts";
+import { noPublish, type ServiceDeps } from "../../src/services/context.ts";
 import { startTestDatabase, type TestDatabase } from "../support/postgres.ts";
 
 const NOW = Temporal.Instant.from("2026-10-02T12:00:00-03:00");
@@ -28,7 +28,7 @@ let deps: ServiceDeps;
 
 beforeAll(async () => {
   db = await startTestDatabase();
-  deps = { db: createDb(db.pool), now: () => NOW, timezone: "America/Argentina/Buenos_Aires" };
+  deps = { db: createDb(db.pool), now: () => NOW, timezone: "America/Argentina/Buenos_Aires", publishEvent: noPublish };
 });
 afterAll(async () => {
   await db?.stop();

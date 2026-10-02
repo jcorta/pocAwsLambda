@@ -110,4 +110,33 @@ export function dayFromToday(days: number): string {
   return Temporal.Now.plainDateISO(config.timezone).add({ days }).toString();
 }
 
+interface CapturedEmail {
+  Destination: { ToAddresses: string[] };
+  Subject: string;
+  Body: { text_part: string | null; html_part: string | null };
+}
+
+/** Emails que capturó el SES de Floci (`/_aws/ses`, docs/spikes/floci.md). */
+export async function capturedEmails(to: string): Promise<CapturedEmail[]> {
+  const res = await fetch(`${config.cognito.endpoint}/_aws/ses`);
+  const body = (await res.json()) as { messages?: CapturedEmail[] } | CapturedEmail[];
+  const messages = Array.isArray(body) ? body : (body.messages ?? []);
+  return messages.filter((m) => m.Destination.ToAddresses.includes(to));
+}
+
+/** Espera hasta que llegue un email que cumpla `match` (SPEC §8.2: hasta 15 s). */
+export async function waitForEmail(
+  to: string,
+  match: (m: CapturedEmail) => boolean,
+  timeoutMs = 15_000,
+): Promise<CapturedEmail> {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    const found = (await capturedEmails(to)).find(match);
+    if (found) return found;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`No llegó el email esperado para ${to} en ${timeoutMs} ms`);
+}
+
 export const ALL_WEEK = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, opensAt: "08:00", closesAt: "12:00" }));

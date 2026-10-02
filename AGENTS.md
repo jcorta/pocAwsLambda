@@ -119,6 +119,11 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - Cada uno importa **solo** las rutas de su dominio, para que el bundle no incluya los demás. Nunca importar `handlers/routes/index.ts` desde un entrypoint.
   - Las dependencias (pool de pg con `max: 1` y secreto de la DB) se crean una vez por contenedor con `lazyServiceDeps`, que reintenta si la inicialización falla.
   - Los clientes del AWS SDK se crean **sin endpoint**.
+- **Notificaciones** (`src/notifications`, `src/services/notifications.ts`):
+  - Los servicios publican **después del commit** con `deps.publishEvent(async () => evento)`. La función que arma el evento corre dentro del publicador, así ninguna falla, ni al leer la reserva ni al enviar a SQS, afecta la respuesta al usuario.
+  - El publicador de producción (`sqsPublisher`) nunca lanza y registra `notification_publish_failed`.
+  - El `notifier` es idempotente por `event_id`. Si SES falla, borra el registro y el mensaje se reintenta; tras 3 intentos va a la DLQ.
+  - Las fechas de los emails se arman con `Intl.DateTimeFormat#formatToParts`, no con el formato completo, que cambia según la versión de ICU.
 - **Repositorios** (`src/repositories`): aceptan `DbOrTx`, así funcionan dentro o fuera de una transacción. Las fechas se convierten en el borde con `toDate` y `toInstant`.
 - **Cobertura:** `pnpm test` en `services/api` mide la cobertura y falla si `src/domain/**` baja del 90 % de líneas. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
 - **Las reglas de concurrencia viven en la base de datos**: exclusion constraint y `FOR UPDATE` (SPEC §3.3). No reemplazarlas por chequeos en código.

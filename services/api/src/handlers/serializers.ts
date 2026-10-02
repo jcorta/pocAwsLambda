@@ -1,16 +1,16 @@
 // De los modelos internos a los DTO del contrato (SPEC §4.4).
 import type { AvailabilityDto, BookingDto, ResourceDto, SettingsDto } from "@reservas/shared";
-import { Temporal } from "temporal-polyfill";
-import { toInstant } from "../infra/db/client.ts";
+import { formatInstant } from "../domain/format.ts";
 import type { BookingView } from "../repositories/booking-views.ts";
 import type { Resource } from "../repositories/resources.ts";
 import type { SettingsRecord } from "../repositories/settings.ts";
 import type { Availability } from "../services/resources.ts";
 
-/** ISO 8601 con el offset de APP_TIMEZONE, p. ej. "2026-10-05T08:00:00-03:00" (SPEC §4.1). */
-export function formatInstant(value: Date | Temporal.Instant, timezone: string): string {
-  const instant = value instanceof Date ? toInstant(value) : value;
-  return instant.toZonedDateTimeISO(timezone).toString({ timeZoneName: "never", smallestUnit: "second" });
+export { formatInstant };
+
+/** `cancelled_by` → "self" si canceló el titular, "admin" si canceló otro (SPEC §4.4). */
+export function cancelledByOf(b: Pick<BookingView, "cancelledBy" | "userId">): "self" | "admin" | null {
+  return b.cancelledBy === null ? null : b.cancelledBy === b.userId ? "self" : "admin";
 }
 
 export function toResourceDto(r: Resource, opts: { isAdmin: boolean; timezone: string }): ResourceDto {
@@ -42,7 +42,7 @@ export function toBookingDto(b: BookingView, opts: { isAdmin: boolean; timezone:
     status: b.status,
     createdAt: formatInstant(b.createdAt, tz),
     cancelledAt: b.cancelledAt ? formatInstant(b.cancelledAt, tz) : null,
-    cancelledBy: b.cancelledBy === null ? null : b.cancelledBy === b.userId ? "self" : "admin",
+    cancelledBy: cancelledByOf(b),
     ...(opts.isAdmin ? { user: { id: b.userId, email: b.userEmail } } : {}),
   };
 }

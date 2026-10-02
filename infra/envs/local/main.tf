@@ -79,6 +79,13 @@ module "auth" {
   name   = local.name
 }
 
+module "notifications" {
+  source = "../../modules/notifications"
+  name   = local.name
+  # Floci verifica la identidad al instante (SPEC §7.3)
+  ses_from = "no-reply@example.com"
+}
+
 module "api" {
   source            = "../../modules/api"
   name              = local.name
@@ -92,6 +99,10 @@ module "api" {
   cognito_issuer_url = "${var.public_floci_url}/${module.auth.user_pool_id}"
   cognito_client_id  = module.auth.client_id
   cors_origins       = ["http://localhost:3000"]
+
+  notifications_queue_url = module.notifications.queue_url
+  notifications_queue_arn = module.notifications.queue_arn
+  ses_from                = module.notifications.ses_from
 }
 
 # --- Outputs (SPEC §7.5): los leen los scripts de deploy, seed y tests con `terraform output -json` ---
@@ -119,6 +130,14 @@ output "migrator_function_name" {
 
 output "function_names" {
   value = module.api.function_names
+}
+
+output "notifications_queue_url" {
+  value = module.notifications.queue_url
+}
+
+output "dlq_url" {
+  value = module.notifications.dlq_url
 }
 
 output "db_secret_arn" {

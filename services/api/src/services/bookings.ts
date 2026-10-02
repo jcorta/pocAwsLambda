@@ -1,8 +1,12 @@
 // Casos de uso de reservas: reservar (CU-04) y cancelar (CU-06).
+import { randomUUID } from "node:crypto";
 import { Temporal } from "temporal-polyfill";
+import { formatInstant } from "../domain/format.ts";
 import { checkActiveBookingsLimit, checkCancellation, validateBookingSlot } from "../domain/rules.ts";
 import { reject } from "../domain/types.ts";
 import { PG_EXCLUSION_VIOLATION, pgErrorCode, toInstant } from "../infra/db/client.ts";
+import type { BookingEvent } from "../notifications/event.ts";
+import { getBookingView } from "../repositories/booking-views.ts";
 import {
   countActiveByUser,
   findBookingForUpdate,
@@ -29,8 +33,9 @@ export async function reserveBooking(
   input: { resourceId: string; startsAt: Temporal.Instant },
 ): Promise<ServiceResult<BookingRow>> {
   const now = deps.now();
+  let result: ServiceResult<BookingRow>;
   try {
-    return await catchFailure(() =>
+    result = await catchFailure(() =>
       deps.db.transaction(async (tx) => {
         await upsertUser(tx, { id: actor.userId, email: actor.email });
         await lockUser(tx, actor.userId);
@@ -72,6 +77,33 @@ export async function reserveBooking(
     // La transacción ya se revirtió: se consulta aparte quién ocupa el turno, para informar `mine` (SPEC §4.3)
     return reject("SLOT_TAKEN", { mine: await isTakenBy(deps, actor.userId, input) });
   }
+  if (result.ok) await publishAfterCommit(deps, "booking_confirmed", result.value.id);
+  return result;
+}
+
+/**
+ * Publica el evento en SQS **después del commit**, nunca antes, para no notificar reservas que no existen
+ * (SPEC §3.3). Si falla, la operación sigue siendo válida: el publicador lo registra y no lanza.
+ */
+async function publishAfterCommit(deps: ServiceDeps, type: BookingEvent["type"], bookingId: string): Promise<void> {
+  await deps.publishEvent(async () => {
+    const view = await getBookingView(deps.db, bookingId);
+    if (!view) return null;
+    const tz = deps.timezone;
+    return {
+      eventId: randomUUID(),
+      type,
+      occurredAt: formatInstant(deps.now(), tz),
+      booking: {
+        id: view.id,
+        resourceName: view.resourceName,
+        startsAt: formatInstant(view.startsAt, tz),
+        endsAt: formatInstant(view.endsAt, tz),
+        userEmail: view.userEmail,
+      },
+      cancelledBy: type === "booking_cancelled" ? (view.cancelledBy === view.userId ? "self" : "admin") : null,
+    };
+  });
 }
 
 async function isTakenBy(
@@ -99,7 +131,7 @@ export async function cancelBooking(
   bookingId: string,
 ): Promise<ServiceResult<BookingRow>> {
   const now = deps.now();
-  return catchFailure(() =>
+  const result = await catchFailure(() =>
     deps.db.transaction(async (tx) => {
       // `cancelled_by` referencia a users: el admin puede no haber reservado nunca
       await upsertUser(tx, { id: actor.userId, email: actor.email });
@@ -123,4 +155,6 @@ export async function cancelBooking(
       return markCancelled(tx, booking.id, actor.userId, now);
     }),
   );
+  if (result.ok) await publishAfterCommit(deps, "booking_cancelled", result.value.id);
+  return result;
 }

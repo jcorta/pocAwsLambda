@@ -3,9 +3,11 @@ import { Temporal } from "temporal-polyfill";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { OpeningHours } from "../../src/domain/types.ts";
 import { createDb } from "../../src/infra/db/client.ts";
+import type { BookingEvent } from "../../src/notifications/event.ts";
 import { cancelBooking, reserveBooking } from "../../src/services/bookings.ts";
 import type { Actor, ServiceDeps } from "../../src/services/context.ts";
 import { createResource, getAvailability, updateResource } from "../../src/services/resources.ts";
+import { processBookingEvent } from "../../src/services/notifications.ts";
 import { changeSettings, readSettings } from "../../src/services/settings.ts";
 import { startTestDatabase, type TestDatabase } from "../support/postgres.ts";
 
@@ -31,9 +33,20 @@ async function newResource(slotMinutes = 60, openingHours = allWeek()) {
   return r.value;
 }
 
+// Colector de los eventos que se publicarían en SQS (SPEC §6.3)
+const published: BookingEvent[] = [];
+
 beforeAll(async () => {
   db = await startTestDatabase();
-  deps = { db: createDb(db.pool), now: () => NOW, timezone: TZ };
+  deps = {
+    db: createDb(db.pool),
+    now: () => NOW,
+    timezone: TZ,
+    publishEvent: async (build) => {
+      const event = await build();
+      if (event) published.push(event);
+    },
+  };
 });
 
 afterAll(async () => {
@@ -338,5 +351,115 @@ describe("settings (CU-09)", () => {
     } finally {
       await changeSettings(deps, original);
     }
+  });
+});
+
+describe("publicación de eventos después del commit (SPEC §3.3 y §6.3)", () => {
+  const eventsOf = (bookingId: string) => published.filter((e) => e.booking.id === bookingId);
+
+  it("reservar publica booking_confirmed con los datos del email", async () => {
+    const resource = await newResource();
+    const actor = user();
+    const r = await reserveBooking(deps, actor, { resourceId: resource.id, startsAt: at("2026-10-14T10:00:00-03:00") });
+    if (!r.ok) throw new Error(r.code);
+    expect(eventsOf(r.value.id)).toEqual([
+      {
+        eventId: expect.any(String),
+        type: "booking_confirmed",
+        occurredAt: "2026-10-02T12:00:00-03:00",
+        booking: {
+          id: r.value.id,
+          resourceName: resource.name,
+          startsAt: "2026-10-14T10:00:00-03:00",
+          endsAt: "2026-10-14T11:00:00-03:00",
+          userEmail: actor.email,
+        },
+        cancelledBy: null,
+      },
+    ]);
+  });
+
+  it("una reserva rechazada no publica nada", async () => {
+    const resource = await newResource();
+    const before = published.length;
+    await reserveBooking(deps, user(), { resourceId: resource.id, startsAt: at("2026-10-14T10:30:00-03:00") });
+    expect(published.length).toBe(before);
+  });
+
+  it("cancelar publica booking_cancelled con quién canceló, y cada evento tiene su propio id", async () => {
+    const resource = await newResource();
+    const owner = user();
+    const mine = await reserveBooking(deps, owner, {
+      resourceId: resource.id,
+      startsAt: at("2026-10-15T10:00:00-03:00"),
+    });
+    const other = await reserveBooking(deps, owner, {
+      resourceId: resource.id,
+      startsAt: at("2026-10-15T11:00:00-03:00"),
+    });
+    if (!mine.ok || !other.ok) throw new Error("no se pudo reservar");
+    await cancelBooking(deps, owner, mine.value.id);
+    await cancelBooking(deps, user(true), other.value.id);
+
+    expect(eventsOf(mine.value.id).map((e) => [e.type, e.cancelledBy])).toEqual([
+      ["booking_confirmed", null],
+      ["booking_cancelled", "self"],
+    ]);
+    expect(eventsOf(other.value.id).at(-1)).toMatchObject({ type: "booking_cancelled", cancelledBy: "admin" });
+    const ids = eventsOf(mine.value.id).map((e) => e.eventId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("notifier: processBookingEvent (CU-10)", () => {
+  async function confirmedEvent(): Promise<BookingEvent> {
+    const resource = await newResource();
+    const r = await reserveBooking(deps, user(), {
+      resourceId: resource.id,
+      startsAt: at("2026-10-19T10:00:00-03:00"),
+    });
+    if (!r.ok) throw new Error(r.code);
+    return eventsOfType(r.value.id, "booking_confirmed");
+  }
+  const eventsOfType = (bookingId: string, type: BookingEvent["type"]) =>
+    published.find((e) => e.booking.id === bookingId && e.type === type)!;
+
+  it("envía el email una sola vez aunque el evento llegue duplicado", async () => {
+    const event = await confirmedEvent();
+    const sent: { to: string; subject: string; text: string }[] = [];
+    const notifier = {
+      db: deps.db,
+      timezone: TZ,
+      sendEmail: async (to: string, email: { subject: string; text: string }) => void sent.push({ to, ...email }),
+    };
+    expect(await processBookingEvent(notifier, event)).toBe("sent");
+    expect(await processBookingEvent(notifier, event)).toBe("duplicate");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({
+      to: event.booking.userEmail,
+      subject: `Reserva confirmada: ${event.booking.resourceName}`,
+    });
+    expect(sent[0]!.text).toContain("lunes 19 de octubre de 2026, de 10:00 a 11:00");
+  });
+
+  it("si SES falla, borra el registro y relanza, así el reintento puede enviarlo", async () => {
+    const event = await confirmedEvent();
+    const failing = {
+      db: deps.db,
+      timezone: TZ,
+      sendEmail: async () => {
+        throw new Error("SES no disponible");
+      },
+    };
+    await expect(processBookingEvent(failing, event)).rejects.toThrow("SES no disponible");
+    const { rows } = await db.pool.query("select count(*)::int as n from notification_log where event_id = $1", [
+      event.eventId,
+    ]);
+    expect(rows[0].n).toBe(0);
+
+    let sent = 0;
+    const retry = { db: deps.db, timezone: TZ, sendEmail: async () => void sent++ };
+    expect(await processBookingEvent(retry, event)).toBe("sent");
+    expect(sent).toBe(1);
   });
 });

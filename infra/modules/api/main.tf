@@ -61,6 +61,18 @@ variable "log_retention_days" {
   default = 14
 }
 
+variable "notifications_queue_url" {
+  type = string
+}
+
+variable "notifications_queue_arn" {
+  type = string
+}
+
+variable "ses_from" {
+  type = string
+}
+
 locals {
   api_lambdas = toset(["me", "resources", "bookings", "admin"])
   # Valores iniciales de SPEC §6.6
@@ -70,6 +82,12 @@ locals {
     bookings  = { memory = 512, timeout = 10 }
     admin     = { memory = 512, timeout = 10 }
     migrator  = { memory = 512, timeout = 60 }
+    notifier  = { memory = 256, timeout = 30 }
+  }
+  # Variables propias de cada Lambda, además de las comunes
+  extra_env = {
+    bookings = { NOTIFICATIONS_QUEUE_URL = var.notifications_queue_url } # la única que publica (SPEC §6.7)
+    notifier = { SES_FROM = var.ses_from }
   }
 }
 
@@ -121,6 +139,38 @@ resource "aws_iam_role_policy" "read_db_secret" {
   policy   = data.aws_iam_policy_document.read_db_secret.json
 }
 
+# Solo `bookings` publica en la cola (el admin cancela por la ruta de bookings, SPEC §6.7)
+data "aws_iam_policy_document" "publish_notifications" {
+  statement {
+    actions   = ["sqs:SendMessage"]
+    resources = [var.notifications_queue_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "publish_notifications" {
+  name   = "publish-notifications"
+  role   = aws_iam_role.lambda["bookings"].id
+  policy = data.aws_iam_policy_document.publish_notifications.json
+}
+
+# Solo `notifier` consume la cola y envía emails
+data "aws_iam_policy_document" "notifier" {
+  statement {
+    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+    resources = [var.notifications_queue_arn]
+  }
+  statement {
+    actions   = ["ses:SendEmail"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "notifier" {
+  name   = "consume-and-send"
+  role   = aws_iam_role.lambda["notifier"].id
+  policy = data.aws_iam_policy_document.notifier.json
+}
+
 # --- Lambdas ---
 
 resource "aws_cloudwatch_log_group" "lambda" {
@@ -147,17 +197,26 @@ resource "aws_lambda_function" "fn" {
   }
 
   environment {
-    variables = {
+    variables = merge({
       APP_TIMEZONE            = var.timezone
       DB_SECRET_ARN           = var.db_secret_arn
       DB_SSL                  = var.db_ssl
       NODE_OPTIONS            = "--enable-source-maps"
       POWERTOOLS_SERVICE_NAME = "${var.name}-${each.key}"
       POWERTOOLS_LOG_LEVEL    = "INFO"
-    }
+    }, lookup(local.extra_env, each.key, {}))
   }
 
   depends_on = [aws_cloudwatch_log_group.lambda, aws_iam_role_policy_attachment.vpc_access]
+}
+
+# SQS → notifier, en lotes de 10 y con respuesta parcial: solo se reintentan los mensajes fallidos (SPEC §6.4)
+resource "aws_lambda_event_source_mapping" "notifications" {
+  event_source_arn        = var.notifications_queue_arn
+  function_name           = aws_lambda_function.fn["notifier"].arn
+  batch_size              = 10
+  function_response_types = ["ReportBatchItemFailures"]
+  depends_on              = [aws_iam_role_policy.notifier]
 }
 
 # --- HTTP API ---

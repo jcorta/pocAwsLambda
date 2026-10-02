@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outRoot = join(root, "dist", "lambdas");
-export const LAMBDAS = ["me", "resources", "bookings", "admin", "migrator"];
+export const LAMBDAS = ["me", "resources", "bookings", "admin", "migrator", "notifier"];
 
 await rm(outRoot, { recursive: true, force: true });
 
