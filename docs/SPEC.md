@@ -439,7 +439,7 @@ El mismo build sirve para Floci y para AWS. Al arrancar, la app lee `/config.jso
 ```
 En AWS real `cognito.endpoint` se omite, y el SDK usa el endpoint de AWS.
 
-- **En local, `cognito.endpoint` es la ruta `/_floci/cognito`** (hallazgo A8). Cognito de Floci no soporta CORS, así que el navegador lo alcanza a través de un proxy del mismo origen que atiende en `localhost` (§10). El frontend resuelve una ruta relativa contra el origen de la página.
+- **En local, `cognito.endpoint` es `/_floci/cognito` y `apiUrl` es `/_floci/api`** (hallazgos A8 y A9). En Floci, ni Cognito ni las respuestas de la HTTP API traen headers CORS, así que el navegador los alcanza a través de un proxy del mismo origen que atiende en `localhost` (§10). El frontend resuelve las rutas relativas contra el origen de la página. En AWS, los dos son URLs absolutas (o el endpoint se omite) y no hay proxy.
 
 - **`config.json` nunca forma parte del build:**
   - El archivo `apps/web/public/config.json`, que genera `local:up` para `pnpm dev`, está en `.gitignore` y se excluye del export.

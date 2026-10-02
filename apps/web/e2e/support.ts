@@ -68,7 +68,8 @@ export async function createResource(baseURL: string, adminEmail: string): Promi
     }),
   );
   const name = `Sala UI ${randomUUID().slice(0, 8)}`;
-  const res = await fetch(`${config.apiUrl}/v1/admin/resources`, {
+  // apiUrl es la ruta del proxy (/_floci/api): se resuelve contra el sitio, como lo haría el navegador
+  const res = await fetch(new URL(`${config.apiUrl}/v1/admin/resources`, baseURL), {
     method: "POST",
     headers: { authorization: `Bearer ${auth.AuthenticationResult!.IdToken!}`, "content-type": "application/json" },
     body: JSON.stringify({

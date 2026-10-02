@@ -29,12 +29,12 @@ export async function migrate(outputs) {
 /** Config de runtime del frontend (SPEC §5.2), para `pnpm dev`. No se versiona ni entra al build. */
 export function writeWebConfig(outputs, env) {
   const config = {
-    apiUrl: outputs.api_url,
+    // Rutas del proxy de `pnpm dev`: en Floci ni Cognito ni la API devuelven CORS (hallazgos A8 y A9)
+    apiUrl: "/_floci/api",
     cognito: {
       region: "us-east-1",
       userPoolId: outputs.user_pool_id,
       clientId: outputs.user_pool_client_id,
-      // Lo atiende el proxy de `pnpm dev`: Cognito de Floci no soporta CORS (hallazgo A8)
       endpoint: "/_floci/cognito",
     },
     timezone: env.APP_TIMEZONE ?? "America/Argentina/Buenos_Aires",

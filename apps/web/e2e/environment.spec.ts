@@ -42,4 +42,15 @@ test("el navegador llega a Cognito por el proxy del mismo origen, en un contexto
 
   expect(result.ok, `el navegador no llegó a Cognito: ${JSON.stringify(result)}`).toBe(true);
   expect(result.body).toMatch(/NotAuthorized|UserNotFound/);
+
+  // La API también por el proxy (hallazgo A9): sin token, el JWT authorizer responde 401
+  expect(config.apiUrl, "en local, la API va por el proxy").toBe("/_floci/api");
+  const api = await page.evaluate(async () => {
+    try {
+      return { ok: true, status: (await fetch("/_floci/api/v1/me")).status };
+    } catch (err) {
+      return { ok: false, error: String(err) };
+    }
+  });
+  expect(api).toEqual({ ok: true, status: 401 });
 });

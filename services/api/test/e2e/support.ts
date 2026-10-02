@@ -7,13 +7,15 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Temporal } from "temporal-polyfill";
 
-const CONFIG_FILE = join(dirname(fileURLToPath(import.meta.url)), "../../../../apps/web/public/config.json");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
+const CONFIG_FILE = join(ROOT, "apps/web/public/config.json");
 
 interface LocalConfig {
   apiUrl: string;
@@ -31,10 +33,18 @@ export function loadConfig(): LocalConfig {
 export const config = loadConfig();
 
 /**
- * Los E2E corren en Node, donde no hay CORS: hablan directo con Floci. `config.cognito.endpoint` es la ruta
- * del proxy del mismo origen que usa el navegador (`/_floci/cognito`, hallazgo A8), que acá no sirve.
+ * Los E2E corren en Node, donde no hay CORS: hablan directo con Floci y con la API. En config.json,
+ * `apiUrl` y `cognito.endpoint` son rutas del proxy del mismo origen que usa el navegador (hallazgos A8 y A9).
  */
 export const FLOCI_URL = process.env["FLOCI_URL"] ?? "http://localhost:4566";
+
+/** URL absoluta de la API, de los outputs de Terraform (o de E2E_API_URL). */
+export const API_URL =
+  process.env["E2E_API_URL"] ??
+  execFileSync(process.execPath, [join(ROOT, "scripts", "local", "output.mjs"), "api_url"], {
+    encoding: "utf8",
+    cwd: ROOT,
+  }).trim();
 
 const cognito = new CognitoIdentityProviderClient({
   region: config.cognito.region,
@@ -89,7 +99,7 @@ export async function api(
   path: string,
   opts: { token?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<ApiResponse> {
-  const res = await fetch(`${config.apiUrl}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     method,
     headers: {
       ...(opts.token ? { authorization: `Bearer ${opts.token}` } : {}),

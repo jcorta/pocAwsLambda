@@ -110,7 +110,10 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - El lockfile de providers (`.terraform.lock.hcl`) se versiona.
 - **Floci deja volúmenes propios** (los de RDS, con la etiqueta `floci=true`) que `docker compose down -v` no borra. `pnpm local:down` y `local:reset` los limpian; no bajar el entorno con `docker compose down` a mano.
 - **Floci y Cognito:** si el usuario ya existe en un pool que usa el email como nombre de usuario, `AdminCreateUser` responde `AliasExistsException`, no `UsernameExistsException`.
-- **Cognito de Floci no soporta CORS (hallazgo A8):** el navegador siempre entra por el proxy del mismo origen (`scripts/local/web-proxy.mjs`, puertos 3000 y 3002), que reenvía `/_floci/cognito` a Floci. Abrir directo `:3001` o el website de S3 rompe el login. Desde Node (tests y scripts) se habla directo con Floci.
+- **En Floci, ni Cognito ni las respuestas de la HTTP API traen CORS (hallazgos A8 y A9):**
+  - El navegador siempre entra por el proxy del mismo origen (`scripts/local/web-proxy.mjs`, puertos 3000 y 3002), que reenvía `/_floci/cognito` y `/_floci/api` a Floci.
+  - Abrir directo `:3001` o el website de S3 rompe el login.
+  - Desde Node (tests y scripts) se habla directo con Floci y con la URL absoluta de la API (output `api_url`).
 - **Migraciones:** solo hacia adelante. Nunca se edita una migración ya mergeada; los cambios van en una migración nueva.
 - **El dominio es puro.** `services/api/src/domain` no importa AWS, la base de datos ni el reloj del sistema: `now` y `timezone` se reciben como parámetros.
 - **Las fechas se calculan con Temporal** (`temporal-polyfill`), nunca con `Date` ni con offsets fijos. Los turnos se generan en tiempo absoluto (regla de los días de cambio de hora en SPEC §2.2).

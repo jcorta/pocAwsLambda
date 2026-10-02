@@ -115,7 +115,8 @@ module "frontend" {
   source = "../../modules/frontend"
   name   = local.name
   runtime_config = {
-    apiUrl = local.api_url
+    # Ruta del mismo origen: la HTTP API de Floci no devuelve CORS en las respuestas (hallazgo A9)
+    apiUrl = "/_floci/api"
     cognito = {
       region     = "us-east-1"
       userPoolId = module.auth.user_pool_id

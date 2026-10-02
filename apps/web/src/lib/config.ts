@@ -2,22 +2,25 @@
 // /config.json lo escribe Terraform en el bucket (o `local:up` para `pnpm dev`).
 import { z } from "zod";
 
+/** URL http(s) absoluta, o ruta del mismo origen que atiende el proxy local (hallazgos A8 y A9). */
+const UrlOrPath = z
+  .string()
+  // `URL.canParse` solo no alcanza: "localhost:4566" parsea como una URL con el esquema "localhost:"
+  .refine(
+    (v) => v.startsWith("/") || (/^https?:\/\//.test(v) && URL.canParse(v)),
+    "Tiene que ser una URL http(s) o una ruta que empiece con /",
+  );
+
 export const RuntimeConfigSchema = z.object({
-  apiUrl: z.url(),
+  // En AWS, la URL de la API; en local, "/_floci/api" (el proxy, porque Floci no devuelve CORS en la API)
+  apiUrl: UrlOrPath,
   cognito: z.object({
     region: z.string(),
     userPoolId: z.string(),
     clientId: z.string(),
     // Solo en Floci; en AWS se omite y el SDK usa el endpoint de AWS. Puede ser una ruta del mismo origen
     // ("/_floci/cognito"), que atiende el proxy local porque Cognito de Floci no soporta CORS (hallazgo A8)
-    endpoint: z
-      .string()
-      // `URL.canParse` solo no alcanza: "localhost:4566" parsea como una URL con el esquema "localhost:"
-      .refine(
-        (v) => v.startsWith("/") || (/^https?:\/\//.test(v) && URL.canParse(v)),
-        "Tiene que ser una URL http(s) o una ruta que empiece con /",
-      )
-      .optional(),
+    endpoint: UrlOrPath.optional(),
   }),
   timezone: z.string(),
 });

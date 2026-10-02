@@ -26,6 +26,7 @@ before(async () => {
     port: 0,
     target: `http://localhost:${site.address().port}`,
     hostHeader: "bucket.s3-website.localhost.floci.io:4566",
+    apiHost: "abc123.execute-api.localhost.floci.io:4566",
     floci: `http://localhost:${floci.address().port}`,
     log: () => {},
   });
@@ -49,6 +50,13 @@ test("conserva la ruta que sigue al prefijo de Cognito", async () => {
   const echo = await (await fetch(`${base}/_floci/cognito/_aws/ses`)).json();
   assert.equal(echo.name, "floci");
   assert.equal(echo.url, "/_aws/ses");
+});
+
+test("reenvía /_floci/api a Floci con el Host de la API, sin el prefijo (hallazgo A9)", async () => {
+  const echo = await (await fetch(`${base}/_floci/api/v1/me?x=1`, { headers: { authorization: "Bearer t" } })).json();
+  assert.equal(echo.name, "floci");
+  assert.equal(echo.url, "/v1/me?x=1");
+  assert.equal(echo.host, "abc123.execute-api.localhost.floci.io:4566");
 });
 
 test("todo lo demás va al sitio, con el Host del website de S3", async () => {
