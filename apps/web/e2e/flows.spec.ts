@@ -1,5 +1,6 @@
 // Recorridos clave de SPEC §8.2 (E2E UI), en un navegador real contra el sitio en el S3 de Floci.
 import { expect, test } from "@playwright/test";
+import "./diagnostics.ts";
 import { createResource, createUser, dayFromToday, lastEmailTo, login, PASSWORD, runtimeConfig } from "./support.ts";
 
 test("un usuario reserva un turno y lo cancela desde Mis reservas", async ({ page, baseURL }) => {
