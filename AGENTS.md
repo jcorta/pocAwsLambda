@@ -28,7 +28,8 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 - Hecho: F2, dominio y base de datos (esquema, migraciones, dominio, repositorios y servicios de `services/api`).
 - Hecho: F3, API e infraestructura (12 rutas, 5 Lambdas, Terraform en Floci, `local:up` y E2E en la CI).
 - Hecho: F4, notificaciones (SQS, `notifier` idempotente y SES; E2E de emails en la CI).
-- Próximo: F5, frontend (Next.js estático, auth con Cognito y E2E de UI con Playwright).
+- Hecho: F5, frontend (Next.js estático, auth con Cognito en memoria, páginas de usuario y admin, sitio en S3 y E2E de UI con Playwright en la CI).
+- Próximo: F6, endurecimiento (`terraform test`, umbrales de cobertura, `envs/aws`, `deploy-aws.yml` y README).
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)

@@ -981,7 +981,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 | **F2 Dominio y base de datos** ✔ | Esquema de Drizzle y migraciones (incluida la exclusion constraint), dominio puro, repositorios, servicios, tests de integración con concurrencia | Casos de §8.2 (dominio e integración) en verde. Cobertura del dominio ≥ 90 % |
 | **F3 API e infra** ✔ | Módulos `network`, `database`, `auth` y `api`, Lambdas `me`, `resources`, `bookings`, `admin` y `migrator`, seed, `local:up`, E2E API, job `e2e-local` | Flujo de reserva completo por API en Floci, en local y en CI |
 | **F4 Notificaciones** ✔ | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |
-| **F5 Frontend** | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
+| **F5 Frontend** ✔ | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
 | **F6 Endurecimiento** | `terraform test`, umbrales de cobertura, `envs/aws` e `infra/bootstrap` completos (sin aplicar), `deploy-aws.yml` deshabilitado, README con guía de inicio | Un desarrollador nuevo levanta todo con `npm run doctor`, `pnpm install` y `pnpm local:up` siguiendo solo el README |
 | **F7 Migración a AWS** (opcional) | Pasos de §11.1 | Smoke tests en verde en AWS real |
 

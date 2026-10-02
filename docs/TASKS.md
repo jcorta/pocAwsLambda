@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ✔ · F5 ◐ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ✔ · F5 ✔ · F6 ☐ · F7 ☐
 
 ---
 
@@ -73,7 +73,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] E2E de emails en `/_aws/ses`
 - [x] Perfil de Floci UI con la bandeja de emails de SES (hecho en F1; Mailpit descartado)
 
-## [ ] F5 — Frontend
+## [x] F5 — Frontend
 > Terminado cuando: los recorridos E2E de UI de §8.2 están en verde en la CI.
 
 - [x] Next.js con export estático, Tailwind y TanStack Query
@@ -86,7 +86,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] `deploy:web:local` (`s3 sync --exclude config.json`)
 - [x] Proxy local del mismo origen para Cognito (hallazgo A8: Cognito de Floci no soporta CORS), con `pnpm dev` y `pnpm local:site`
 - [x] Tests unitarios de la web (38 tests)
-- [ ] E2E de UI con Playwright, también en la CI
+- [x] E2E de UI con Playwright, también en la CI (5 recorridos, incluido el registro con el código real)
 
 ## [ ] F6 — Endurecimiento
 > Terminado cuando: un desarrollador nuevo levanta todo siguiendo solo el README.
