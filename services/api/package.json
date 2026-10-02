@@ -4,14 +4,15 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@reservas/shared": "workspace:*",
     "drizzle-orm": "^0.45.3",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "temporal-polyfill": "^1.0.5"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.2.0",

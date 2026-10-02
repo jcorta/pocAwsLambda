@@ -89,7 +89,9 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 ### Código
 - **Migraciones:** solo hacia adelante. Nunca se edita una migración ya mergeada; los cambios van en una migración nueva.
 - **El dominio es puro.** `services/api/src/domain` no importa AWS, la base de datos ni el reloj del sistema: `now` y `timezone` se reciben como parámetros.
-- **Las fechas se calculan con una librería que entienda zonas horarias**, nunca con offsets fijos. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
+- **Las fechas se calculan con Temporal** (`temporal-polyfill`), nunca con `Date` ni con offsets fijos. Los turnos se generan en tiempo absoluto (regla de los días de cambio de hora en SPEC §2.2).
+- **Las reglas devuelven `RuleResult`** (`{ ok: true }` o `{ ok: false, code, details }`, en `src/domain/types.ts`) en lugar de lanzar excepciones. Los códigos salen de `ERROR_CODES` en `@reservas/shared`.
+- **Cobertura:** `pnpm test` en `services/api` mide la cobertura y falla si `src/domain/**` baja del 90 % de líneas. Se guardan en UTC y la API las devuelve con el offset de `APP_TIMEZONE` (SPEC §4.1).
 - **Las reglas de concurrencia viven en la base de datos**: exclusion constraint y `FOR UPDATE` (SPEC §3.3). No reemplazarlas por chequeos en código.
 - **Los esquemas Zod se definen una sola vez**, en `packages/shared`.
 - **Los errores** usan los códigos del catálogo de SPEC §4.3. Para agregar uno, primero se agrega a la spec.

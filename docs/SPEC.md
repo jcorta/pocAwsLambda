@@ -68,7 +68,11 @@ Una organización tiene recursos compartidos (salas, equipos, canchas, vehículo
 - **Zona horaria del sistema:** `APP_TIMEZONE`, por defecto `America/Argentina/Buenos_Aires`. Es configurable por despliegue y acepta cualquier zona IANA.
   - Se usa para tres cosas: interpretar los horarios de apertura, determinar dónde empieza y termina "el día" (disponibilidad, RN-03) y mostrar horas en los emails.
   - En la base de datos todo se guarda en UTC (`timestamptz`).
-  - El cálculo de turnos debe ser correcto también en zonas con horario de verano, donde hay días de 23 o 25 horas. Para eso se usa una librería que entienda zonas horarias, nunca offsets fijos.
+  - El cálculo de turnos debe ser correcto también en zonas con horario de verano, donde hay días de 23 o 25 horas. Para eso se usa una librería que entienda zonas horarias (Temporal), nunca offsets fijos.
+  - **Los turnos se generan en tiempo absoluto:** desde la apertura del día, cada `slot_minutes` minutos reales, mientras el turno termine antes o en el cierre. Así todo turno dura exactamente `slot_minutes` y ninguno se solapa con otro. En los días de cambio de hora:
+    - **Cuando se adelanta el reloj** (día de 23 h), la hora que no existe no tiene turno. Ejemplo con turnos de 60 min: 00:00, 01:00 y 03:00.
+    - **Cuando se atrasa el reloj** (día de 25 h), la hora repetida tiene **dos turnos distintos**, los dos reservables. Ejemplo: 00:00, 01:00, 01:00 (la segunda ocurrencia) y 02:00.
+    - **Si la apertura o el cierre caen en una hora que no existe**, se corren hacia adelante (por ejemplo, 02:30 pasa a 03:30).
 
 ### 2.3 Reglas de negocio
 
