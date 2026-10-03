@@ -922,7 +922,7 @@ Decisiones de base:
 | `pnpm test` / `test:integration` / `test:infra` | Tests unitarios, de integración y de infra. No necesitan el entorno levantado |
 | `pnpm test:e2e` / `test:e2e:ui` | E2E de la API y de la UI contra el entorno local |
 | `pnpm local:seed` | Vuelve a correr el seed (§10.2), por ejemplo después de borrar datos. Es idempotente |
-| `pnpm local:logs [lambda]` | Muestra los logs de Floci o, con un nombre (`me`, `resources`, `bookings`, `admin` o `migrator`), los de los últimos 30 min de esa Lambda |
+| `pnpm local:logs [lambda]` | Muestra los logs de Floci o, con un nombre (`me`, `resources`, `bookings`, `admin`, `migrator` o `notifier`), los de los últimos 30 min de esa Lambda. Con `api`, los access logs de API Gateway, que Floci no escribe (hallazgo A10) |
 | `pnpm local:down` | Detiene los contenedores y borra los volúmenes de Floci, incluidos los de RDS. Floci guarda todo en memoria, así que sin el contenedor esos volúmenes ya no sirven. El state local se conserva, y el próximo `local:up` lo descarta porque detecta que Floci arrancó de nuevo |
 | `pnpm local:reset` | Lo mismo que `local:down`, y además borra el state local de Terraform, los zips y `apps/web/public/config.json`. Conserva `.env.local` |
 
@@ -1001,7 +1001,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 | **F3 API e infra** ✔ | Módulos `network`, `database`, `auth` y `api`, Lambdas `me`, `resources`, `bookings`, `admin` y `migrator`, seed, `local:up`, E2E API, job `e2e-local` | Flujo de reserva completo por API en Floci, en local y en CI |
 | **F4 Notificaciones** ✔ | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |
 | **F5 Frontend** ✔ | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
-| **F6 Endurecimiento** | `terraform test`, umbrales de cobertura, `envs/aws` e `infra/bootstrap` completos (sin aplicar), `deploy-aws.yml` deshabilitado, README con guía de inicio | Un desarrollador nuevo levanta todo con `npm run doctor`, `pnpm install` y `pnpm local:up` siguiendo solo el README |
+| **F6 Endurecimiento** ✔ | `terraform test`, umbrales de cobertura, `envs/aws` e `infra/bootstrap` completos (sin aplicar), `deploy-aws.yml` deshabilitado, README con guía de inicio | Un desarrollador nuevo levanta todo con `npm run doctor`, `pnpm install` y `pnpm local:up` siguiendo solo el README |
 | **F7 Migración a AWS** (opcional) | Pasos de §11.1 | Smoke tests en verde en AWS real |
 
 ### 12.1 Decisiones de la Parte 3
