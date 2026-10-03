@@ -6,7 +6,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { compose, fail, ROOT, step } from "./local/lib.mjs";
 
-const ROOTS = ["infra/envs/local"];
+const ROOTS = ["infra/envs/local", "infra/envs/aws", "infra/bootstrap"];
 const MODULES = readdirSync(join(ROOT, "infra/modules")).map((m) => `infra/modules/${m}`);
 
 /** Terraform en su contenedor, sin levantar Floci (`--no-deps`). */
@@ -28,7 +28,7 @@ if (mode === "lint") {
   step("tflint");
   compose(["run", "--rm", "-T", "tflint", "--recursive", "--config", "/work/.tflint.hcl", "--no-color"]);
 } else if (mode === "test") {
-  const withTests = MODULES.filter((dir) => existsSync(join(ROOT, dir, "tests")));
+  const withTests = [...MODULES, ...ROOTS].filter((dir) => existsSync(join(ROOT, dir, "tests")));
   for (const dir of withTests) {
     step(`terraform test: ${dir}`);
     init(dir);

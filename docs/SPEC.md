@@ -675,6 +675,8 @@ provider "aws" {
 | `ses_from` | `no-reply@example.com` (Floci verifica al instante) | Remitente del dominio verificado |
 | `network_egress` | `none` | Decisión D-3.1 |
 
+Hasta F7, `envs/aws` usa `enable_cloudfront = false` y `network_egress = "none"`, porque los módulos todavía no admiten otros valores. Con eso, `cors_origins` es el website del bucket. Así el root queda completo y validado (`validate`, `tflint` y `terraform test`), pero no se puede usar en AWS hasta resolver esas dos variables.
+
 ### 7.4 Recursos por módulo (resumen)
 - **network:**
   - VPC con 2 subnets privadas en AZ distintas.
@@ -695,6 +697,7 @@ provider "aws" {
   - `aws_ses_email_identity` (o `domain_identity` en AWS) para el remitente.
 - **api:**
   - `aws_apigatewayv2_api` HTTP con CORS, JWT authorizer (`issuer = var.cognito_issuer_url`, `audience = [clientId]`) y stage `$default` con auto-deploy y access logs.
+  - Los access logs van al log group `/aws/apigateway/<nombre>-api`, con 14 días de retención: una línea JSON por request con `requestId`, `lambdaRequestId` (el `x-request-id` que devuelve la Lambda, para cruzar con sus logs), `routeKey`, `status`, latencias y errores de integración y del authorizer. En local se ven con `pnpm local:logs api`.
   - Una `aws_apigatewayv2_route` por ruta de §4.5, con su integración `AWS_PROXY` a la Lambda del dominio.
   - Lambdas `me`, `resources`, `bookings`, `admin`, `notifier` y `migrator`, en las subnets privadas con el SG `lambda`.
   - Un rol IAM por Lambda, con los permisos de §6.7.
@@ -728,8 +731,12 @@ Son los puntos donde la "transparencia" puede romperse:
   - Backend `local` (`infra/envs/local/terraform.tfstate`, en `.gitignore`).
   - Floci se trata como **efímero**: si el contenedor de Floci es nuevo, `local:up` descarta el state local antes del `apply`.
 - **aws:**
-  - Backend `s3` con bloqueo nativo (`use_lockfile = true`), así no hace falta DynamoDB.
+  - Backend `s3` con bloqueo nativo (`use_lockfile = true`), así no hace falta DynamoDB. El bucket y la región se pasan con `terraform init -backend-config=backend.hcl` (archivo en `.gitignore`, con `backend.hcl.example` versionado), porque el nombre del bucket incluye el id de la cuenta.
   - El bucket del state y el rol OIDC se crean una sola vez desde `infra/bootstrap`, que usa state local y se aplica a mano.
+- **`infra/bootstrap`:**
+  - Bucket `reservas-tfstate-<account-id>`, con versionado, cifrado, acceso público bloqueado y solo TLS.
+  - Proveedor OIDC de GitHub y rol `reservas-github-deploy`. El rol lo asume solo este repo, desde `main` (`repo:<repo>:ref:refs/heads/main`) o desde el environment `aws` (`repo:<repo>:environment:aws`). Con un environment, GitHub firma el token con el environment en lugar de la rama, así que el environment `aws` se configura para aceptar solo `main`.
+  - Permisos: `PowerUserAccess`, que cubre todos los servicios menos IAM, más una política que solo administra y pasa a Lambda los roles `reservas-aws-*`.
 
 ---
 
@@ -769,6 +776,11 @@ Son los puntos donde la "transparencia" puede romperse:
 - Solo los roles de `bookings` y `notifier` tienen permisos sobre SQS, y solo `notifier` tiene permisos sobre SES.
 - RDS no es públicamente accesible y su SG solo acepta tráfico desde el SG `lambda`.
 - Con `enable_cloudfront = false` no se crea ninguna distribución.
+- El stage `$default` escribe access logs en su log group.
+- `infra/bootstrap`: el bucket del state bloquea el acceso público y el rol de deploy solo lo asume este repo, desde `main` o desde el environment `aws`.
+- `envs/aws`: emisor de Cognito y URL de la API de AWS, y valores por defecto de §7.3.
+
+**E2E API (access logs):** API Gateway de Floci escribe la línea de access log de cada request, con el `lambdaRequestId` que devuelve la Lambda.
 
 **E2E API:**
 - `401` sin token. `401 INVALID_TOKEN_TYPE` con el access token en lugar del ID token. `403` cuando un `user` llama a `/admin`.

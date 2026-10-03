@@ -93,8 +93,8 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 
 - [x] `terraform test` con las aserciones de §8.2 y `tflint` (job `infra-test`; tflint con el ruleset de Terraform incluido)
 - [x] Umbrales de cobertura aplicados en la CI (§8.4)
-- [ ] `infra/envs/aws` e `infra/bootstrap` completos, sin aplicar
-- [ ] Access logs del stage `$default` de API Gateway (SPEC §7.4), verificando que Floci los acepte
+- [x] `infra/envs/aws` e `infra/bootstrap` completos, sin aplicar (CloudFront y la salida de red quedan para F7)
+- [x] Access logs del stage `$default` de API Gateway (SPEC §7.4), verificados en Floci por un E2E
 - [ ] `deploy-aws.yml` preparado y deshabilitado
 - [ ] Job `build` que sube los bundles como artifacts para `deploy-aws.yml` (requiere aprobar `actions/upload-artifact` y `download-artifact`)
 - [ ] README con guía de inicio, verificada en una máquina limpia

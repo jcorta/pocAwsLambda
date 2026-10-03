@@ -56,7 +56,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm test:e2e:ui` | E2E de UI con Playwright contra el sitio en S3. Requiere `local:up` y `deploy:web:local`; el proxy lo levanta Playwright. La primera vez: `pnpm --filter @reservas/web exec playwright install chromium` |
 | `pnpm deploy:local` | Ciclo rápido tras cambiar el backend: build, Terraform y migraciones (~50 s) |
 | `pnpm local:seed` | Seed idempotente: usuarios de `.env.local` y 3 recursos de ejemplo |
-| `pnpm local:logs [lambda]` | Logs de Floci, o de una Lambda (`me`, `resources`, `bookings`, `admin` o `migrator`) |
+| `pnpm local:logs [lambda\|api]` | Logs de Floci, de una Lambda (`me`, `resources`, `bookings`, `admin`, `migrator` o `notifier`) o los access logs de API Gateway (`api`) |
 | `pnpm local:down` / `pnpm local:reset` | Baja el entorno y borra los volúmenes de Floci. `reset` además borra el state y lo generado (conserva `.env.local`) |
 | `pnpm typecheck` | `tsc --noEmit` en cada paquete |
 | `pnpm lint` | ESLint en todo el repo |
@@ -66,8 +66,8 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm --filter @reservas/api check:bundles` | Carga cada bundle y verifica que las Lambdas de la API respondan 401 sin ID token (detecta problemas de ESM o CommonJS) |
 | `pnpm test:e2e` | E2E de la API contra Floci. **Requiere `pnpm local:up`** (lee `apps/web/public/config.json`) |
 | `pnpm test:integration` | Tests de integración contra Postgres 16 real (Testcontainers), con cobertura de lo que depende de la base (umbral 80 %). **Requiere Docker** |
-| `pnpm lint:infra` | `terraform fmt -check`, `validate` de los roots y `tflint`, en contenedores. **Requiere Docker** |
-| `pnpm test:infra` | `terraform test` en cada módulo con carpeta `tests/`, con providers simulados (no necesita Floci). **Requiere Docker** |
+| `pnpm lint:infra` | `terraform fmt -check`, `validate` de los roots (`envs/local`, `envs/aws` y `bootstrap`) y `tflint`, en contenedores. **Requiere Docker** |
+| `pnpm test:infra` | `terraform test` en cada módulo y root con carpeta `tests/`, con providers simulados (no necesita Floci). **Requiere Docker** |
 | `pnpm --filter @reservas/api db:generate` | Genera una migración SQL a partir de los cambios en `src/infra/db/schema.ts`. Lo que Drizzle no expresa (exclusion constraints, extensiones, datos) va en una migración manual (`drizzle-kit generate --custom`) |
 | `pnpm secrets:staged` / `pnpm secrets:history` | gitleaks (en Docker) sobre lo que está por commitearse, o sobre todo el historial |
 
@@ -111,7 +111,8 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - **Terraform:**
   - Los módulos (`infra/modules/*`) no saben en qué entorno corren; las diferencias van en `infra/envs/*`.
   - Las rutas de la API se declaran en `infra/modules/api/routes.tf.json`. Una ruta nueva va **ahí y** en `handlers/routes/<lambda>.ts`; el test `routes.test.ts` falla si no coinciden.
-  - El lockfile de providers (`.terraform.lock.hcl`) se versiona.
+  - El lockfile de providers (`.terraform.lock.hcl`) se versiona en cada root, con las mismas versiones en todos.
+  - `envs/aws` e `infra/bootstrap` **no se aplican** hasta F7. Se validan solo con `pnpm lint:infra` y `pnpm test:infra`, con providers simulados.
 - **Floci deja volúmenes propios** (los de RDS, con la etiqueta `floci=true`) que `docker compose down -v` no borra. `pnpm local:down` y `local:reset` los limpian; no bajar el entorno con `docker compose down` a mano.
 - **Floci y Cognito:** si el usuario ya existe en un pool que usa el email como nombre de usuario, `AdminCreateUser` responde `AliasExistsException`, no `UsernameExistsException`.
 - **En Floci, ni Cognito ni las respuestas de la HTTP API traen CORS (hallazgos A8 y A9):**

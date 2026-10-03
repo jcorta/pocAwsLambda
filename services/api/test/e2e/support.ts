@@ -39,12 +39,7 @@ export const config = loadConfig();
 export const FLOCI_URL = process.env["FLOCI_URL"] ?? "http://localhost:4566";
 
 /** URL absoluta de la API, de los outputs de Terraform (o de E2E_API_URL). */
-export const API_URL =
-  process.env["E2E_API_URL"] ??
-  execFileSync(process.execPath, [join(ROOT, "scripts", "local", "output.mjs"), "api_url"], {
-    encoding: "utf8",
-    cwd: ROOT,
-  }).trim();
+export const API_URL = process.env["E2E_API_URL"] ?? terraformOutput("api_url");
 
 const cognito = new CognitoIdentityProviderClient({
   region: config.cognito.region,
@@ -153,6 +148,38 @@ export async function waitForEmail(
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`No llegó el email esperado para ${to} en ${timeoutMs} ms`);
+}
+
+/** Un output de Terraform del entorno local. */
+function terraformOutput(name: string): string {
+  return execFileSync(process.execPath, [join(ROOT, "scripts", "local", "output.mjs"), name], {
+    encoding: "utf8",
+    cwd: ROOT,
+  }).trim();
+}
+
+/** Access logs de API Gateway desde `since` (ms), por la API JSON de CloudWatch Logs de Floci. */
+export async function accessLogs(since: number): Promise<Record<string, string>[]> {
+  const res = await fetch(FLOCI_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-amz-json-1.1",
+      "x-amz-target": "Logs_20140328.FilterLogEvents",
+      // Floci rutea por el servicio de la firma; la firma en sí no se valida
+      authorization:
+        "AWS4-HMAC-SHA256 Credential=test/20260101/us-east-1/logs/aws4_request, SignedHeaders=host, Signature=x",
+    },
+    body: JSON.stringify({ logGroupName: terraformOutput("api_access_log_group"), startTime: since }),
+  });
+  if (!res.ok) throw new Error(`CloudWatch Logs respondió ${res.status}: ${await res.text()}`);
+  const { events = [] } = (await res.json()) as { events?: { message: string }[] };
+  return events.map((e) => {
+    try {
+      return JSON.parse(e.message) as Record<string, string>;
+    } catch {
+      return { raw: e.message };
+    }
+  });
 }
 
 export const ALL_WEEK = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, opensAt: "08:00", closesAt: "12:00" }));

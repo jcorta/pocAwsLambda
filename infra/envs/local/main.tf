@@ -177,6 +177,10 @@ output "dlq_url" {
   value = module.notifications.dlq_url
 }
 
+output "api_access_log_group" {
+  value = module.api.access_log_group
+}
+
 output "db_secret_arn" {
   value = module.database.secret_arn
 }
