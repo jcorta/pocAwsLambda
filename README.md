@@ -105,6 +105,7 @@ docs/              Especificación, tareas y resultados del spike de Floci
 - **La API o el sitio no resuelven sin conexión a Internet.** Las URLs `*.localhost.floci.io` dependen de un DNS público que responde `127.0.0.1`. Para trabajar sin conexión, agregá una entrada en el archivo `hosts` con el host que muestra `local:up`.
 - **El login falla al abrir el sitio directo del bucket o `:3001`.** Cognito de Floci no soporta CORS, así que el navegador tiene que entrar por el proxy local: `http://localhost:3000` (`pnpm dev`) o `http://localhost:3002` (`pnpm local:site`).
 - **Algo quedó en un estado raro.** `pnpm local:reset` y después `pnpm local:up` dejan todo como nuevo.
+- **En Windows, `pnpm` falla con "El sistema no puede encontrar la ruta especificada".** Las rutas de `node_modules` superan los 260 caracteres. Cloná el repo en una carpeta de ruta corta (por ejemplo `C:\dev\pocAwsLambda`) o habilitá las rutas largas de Windows.
 - **No puedo commitear.** El hook de pre-commit corre gitleaks en Docker, así que Docker tiene que estar corriendo.
 
 ## Documentación

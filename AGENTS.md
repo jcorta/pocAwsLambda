@@ -12,7 +12,7 @@ POC de un **sistema de reservas de recursos por turnos**, que garantiza que no h
 |---|---|
 | [`docs/SPEC.md`](docs/SPEC.md) | Especificación: reglas de negocio (RN-xx), casos de uso (CU-xx), contrato de API, arquitectura, infra, tests y fases |
 | [`docs/TASKS.md`](docs/TASKS.md) | Lista de tareas por fase, con casillas |
-| [`docs/spikes/floci.md`](docs/spikes/floci.md) | Qué funciona en Floci y los hallazgos A1 a A7 |
+| [`docs/spikes/floci.md`](docs/spikes/floci.md) | Qué funciona en Floci y los hallazgos A1 a A10 |
 
 Si la implementación y la spec no coinciden, **no elijas una en silencio**: señala la diferencia y pregunta.
 
@@ -29,7 +29,8 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 - Hecho: F3, API e infraestructura (12 rutas, 5 Lambdas, Terraform en Floci, `local:up` y E2E en la CI).
 - Hecho: F4, notificaciones (SQS, `notifier` idempotente y SES; E2E de emails en la CI).
 - Hecho: F5, frontend (Next.js estático, auth con Cognito en memoria, páginas de usuario y admin, sitio en S3 y E2E de UI con Playwright en la CI).
-- Próximo: F6, endurecimiento (`terraform test`, umbrales de cobertura, `envs/aws`, `deploy-aws.yml` y README).
+- Hecho: F6, endurecimiento (`terraform test` y tflint, umbrales de cobertura, access logs, `envs/aws` e `infra/bootstrap` sin aplicar, `deploy-aws.yml` deshabilitado, README y checklist de publicación).
+- Próximo: F7, migración a AWS (opcional). Empieza por decidir D-3.1; no se aplica nada en AWS sin aprobación.
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)

@@ -3,7 +3,7 @@
 Se tilda cada tarea al completarla, y la fase cuando se cumple su **definición de terminado** (SPEC §12).
 Referencia: [`docs/SPEC.md`](SPEC.md).
 
-**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ✔ · F5 ✔ · F6 ☐ · F7 ☐
+**Progreso:** F0 ✔ · F1 ✔ · F2 ✔ · F3 ✔ · F4 ✔ · F5 ✔ · F6 ✔ · F7 ☐
 
 ---
 
@@ -88,7 +88,7 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Tests unitarios de la web (38 tests)
 - [x] E2E de UI con Playwright, también en la CI (5 recorridos, incluido el registro con el código real)
 
-## [ ] F6 — Endurecimiento
+## [x] F6 — Endurecimiento
 > Terminado cuando: un desarrollador nuevo levanta todo siguiendo solo el README.
 
 - [x] `terraform test` con las aserciones de §8.2 y `tflint` (job `infra-test`; tflint con el ruleset de Terraform incluido)
@@ -97,8 +97,19 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Access logs del stage `$default` de API Gateway (SPEC §7.4), Floci acepta la configuración (lo verifica un E2E) pero no los escribe (hallazgo A10)
 - [x] `deploy-aws.yml` preparado y deshabilitado (plan, apply con aprobación, migrator, sitio y smoke tests)
 - [x] Job `build` que sube los bundles como artifacts para `deploy-aws.yml` (solo en `main`)
-- [ ] README con guía de inicio, verificada en una máquina limpia
-- [ ] Checklist para hacer público el repo (§9.3)
+- [x] README con guía de inicio, verificada desde un clon limpio en Windows el 2026-10-03: `local:up` en 145 s, login y API por el proxy de `pnpm dev`, E2E de la API (15) y de la UI (5) en verde
+- [x] Checklist para hacer público el repo (§9.3): ver abajo
+
+### Checklist para hacer público el repo (SPEC §9.3)
+Revisada el 2026-10-03. Lo que queda abierto lo hace el dueño del repo en GitHub, cuando decida publicarlo.
+
+- [x] CI en verde en `main` y fases F0 a F6 completas
+- [x] README con guía de inicio verificada desde un clon limpio
+- [x] Licencia: MIT, en `LICENSE`
+- [x] `gitleaks` sobre todo el historial (`pnpm secrets:history`): sin hallazgos
+- [x] Issues, ramas y artifacts: sin issues abiertos, solo la rama `main` y un único artifact (`build`, 7,9 MB, vence a los 14 días)
+- [ ] Al publicar: proteger `main` (PR obligatorio con los checks de `ci.yml` en verde) y crear el environment `aws` con aprobación manual, limitado a `main`
+- [ ] Al publicar: volver a correr `pnpm secrets:history` justo antes de cambiar la visibilidad
 
 ## [ ] F7 — Migración a AWS real *(opcional)*
 > Terminado cuando: los smoke tests están en verde en AWS real.
