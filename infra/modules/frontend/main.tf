@@ -77,3 +77,8 @@ resource "aws_s3_object" "config" {
 output "bucket" {
   value = aws_s3_bucket.site.id
 }
+
+output "website_url" {
+  description = "URL del website del bucket (sin CloudFront). En Floci el root arma la suya (hallazgo del spike F0)."
+  value       = "http://${aws_s3_bucket_website_configuration.site.website_endpoint}"
+}

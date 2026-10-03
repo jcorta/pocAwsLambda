@@ -32,6 +32,7 @@ apps/web/next-env.d.ts
 crash.log
 crash.*.log
 infra/envs/aws/terraform.tfvars
+infra/envs/aws/backend.hcl
 # Los módulos se inicializan solo para 	erraform test: el lock file vale en los roots
 infra/modules/*/.terraform.lock.hcl
 override.tf

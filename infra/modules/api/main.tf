@@ -265,10 +265,35 @@ resource "aws_apigatewayv2_route" "route" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+# Access logs del stage (SPEC §7.4): una línea JSON por request. `lambdaRequestId` es el id que la Lambda
+# devuelve en x-request-id y escribe en sus logs: así se cruzan los logs de API Gateway con los de la Lambda.
+resource "aws_cloudwatch_log_group" "access" {
+  name              = "/aws/apigateway/${var.name}-api"
+  retention_in_days = var.log_retention_days
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.http.id
   name        = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.access.arn
+    format = jsonencode({
+      requestId          = "$context.requestId"
+      lambdaRequestId    = "$context.integration.requestId"
+      requestTime        = "$context.requestTime"
+      routeKey           = "$context.routeKey"
+      status             = "$context.status"
+      responseLatency    = "$context.responseLatency"
+      integrationStatus  = "$context.integrationStatus"
+      integrationError   = "$context.integrationErrorMessage"
+      authorizerError    = "$context.authorizer.error"
+      sourceIp           = "$context.identity.sourceIp"
+      userAgent          = "$context.identity.userAgent"
+      integrationLatency = "$context.integrationLatency"
+    })
+  }
 }
 
 resource "aws_lambda_permission" "apigw" {
@@ -286,6 +311,10 @@ output "api_id" {
 
 output "api_endpoint" {
   value = aws_apigatewayv2_api.http.api_endpoint
+}
+
+output "access_log_group" {
+  value = aws_cloudwatch_log_group.access.name
 }
 
 output "function_names" {

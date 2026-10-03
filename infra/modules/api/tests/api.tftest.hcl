@@ -16,6 +16,9 @@ mock_provider "aws" {
       invoke_arn = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:000000000000:function:test/invocations"
     }
   }
+  mock_resource "aws_cloudwatch_log_group" {
+    defaults = { arn = "arn:aws:logs:us-east-1:000000000000:log-group:test" }
+  }
   mock_resource "aws_apigatewayv2_api" {
     defaults = { execution_arn = "arn:aws:execute-api:us-east-1:000000000000:test" }
   }
@@ -73,6 +76,25 @@ run "rutas" {
   assert {
     condition     = alltrue([for k, r in aws_apigatewayv2_route.route : r.target == "integrations/${aws_apigatewayv2_integration.lambda[local.routes[k]].id}"])
     error_message = "Cada ruta tiene que apuntar a la integración de su Lambda (routes.tf.json)."
+  }
+}
+
+run "access_logs" {
+  command = apply
+
+  assert {
+    condition     = aws_apigatewayv2_stage.default.access_log_settings[0].destination_arn == aws_cloudwatch_log_group.access.arn
+    error_message = "El stage $default escribe access logs en su log group."
+  }
+
+  assert {
+    condition     = alltrue([for k in ["requestId", "lambdaRequestId", "routeKey", "status"] : contains(keys(jsondecode(aws_apigatewayv2_stage.default.access_log_settings[0].format)), k)])
+    error_message = "Los access logs incluyen requestId, lambdaRequestId, routeKey y status."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_log_group.access.retention_in_days == 14
+    error_message = "Los access logs se retienen 14 días, como los de las Lambdas."
   }
 }
 

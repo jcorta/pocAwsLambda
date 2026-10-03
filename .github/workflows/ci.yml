@@ -147,7 +147,7 @@ jobs:
         if: failure()
         run: |
           pnpm local:logs || true
-          for fn in me resources bookings admin migrator; do echo "::group::$fn"; pnpm local:logs "$fn" || true; echo "::endgroup::"; done
+          for fn in me resources bookings admin migrator notifier api; do echo "::group::$fn"; pnpm local:logs "$fn" || true; echo "::endgroup::"; done
 
       - name: Bajar el entorno
         if: always()

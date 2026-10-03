@@ -1,0 +1,9 @@
+# Copiar a terraform.tfvars (está en .gitignore) y completar en F7 (SPEC §11.1).
+# Las variables que no aparecen toman los valores de SPEC §7.3 (ver main.tf).
+
+region   = "us-east-1"
+ses_from = "no-reply@tu-dominio.example"
+
+# Se deciden en F7; hoy los módulos solo admiten estos valores:
+# network_egress    = "none"   # "nat" o "endpoints" (D-3.1)
+# enable_cloudfront = false

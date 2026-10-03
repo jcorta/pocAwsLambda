@@ -12,11 +12,13 @@ import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  ACCESS_LOG_GROUP,
   ALL_WEEK,
   api,
   capturedEmails,
   createUser,
   dayFromToday,
+  defaultStage,
   FLOCI_URL,
   waitForEmail,
   type TestUser,
@@ -75,6 +77,14 @@ describe("autenticación y autorización", () => {
     expect(MeSchema.parse(res.body)).toMatchObject({ email: user.email, roles: ["user"] });
     expect(res.headers.get("x-request-id")).toBeTruthy();
     expect(MeSchema.parse((await api("GET", "/v1/me", { token: admin.idToken })).body).roles).toEqual(["admin"]);
+  });
+
+  it("el stage $default tiene los access logs configurados hacia su log group (Floci no los escribe, hallazgo A10)", async () => {
+    const { accessLogSettings } = await defaultStage();
+    expect(accessLogSettings?.destinationArn).toContain(ACCESS_LOG_GROUP);
+    expect(Object.keys(JSON.parse(accessLogSettings?.format ?? "{}"))).toEqual(
+      expect.arrayContaining(["requestId", "lambdaRequestId", "routeKey", "status"]),
+    );
   });
 
   it("CORS: el preflight desde el frontend local devuelve el origen permitido", async () => {
