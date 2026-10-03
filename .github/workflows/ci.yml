@@ -1,5 +1,4 @@
-# CI de cada PR y de main (SPEC §9.1): changes, lint, unit, integration y e2e-local.
-# El job infra-test (terraform test) se agrega en F6.
+# CI de cada PR y de main (SPEC §9.1): changes, lint, unit, integration, infra-test y e2e-local.
 name: ci
 
 on:
@@ -68,8 +67,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
 
-      - name: Formato de Terraform
-        run: docker compose run --rm -T --no-deps terraform fmt -check -recursive -diff
+      - name: Terraform (fmt, validate y tflint)
+        run: pnpm lint:infra
 
       - name: Secretos en los commits (gitleaks)
         env:
@@ -101,10 +100,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
 
+  # terraform test en cada módulo, con providers simulados: no necesita Floci (SPEC §8.2)
+  infra-test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/infra.mjs test
+
   # E2E de punta a punta contra Floci: el mismo `pnpm local:up` que en una máquina de desarrollo.
   # Compila por su cuenta en lugar de descargar artifacts (decisión de F3; los artifacts llegan en F6).
   e2e-local:
-    needs: [changes, lint, unit, integration]
+    needs: [changes, lint, unit, integration, infra-test]
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25

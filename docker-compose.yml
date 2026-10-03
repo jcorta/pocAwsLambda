@@ -40,10 +40,25 @@ services:
     working_dir: /work
     volumes:
       - ./:/work
+      - terraform-plugins:/plugin-cache
     environment:
       TF_VAR_floci_endpoint: http://floci:4566
+      # Cache de providers compartida entre los roots y los módulos que se inicializan (`pnpm test:infra`)
+      TF_PLUGIN_CACHE_DIR: /plugin-cache
     networks:
       - floci-net
+
+  # Linter de Terraform (SPEC §8.1), solo con el ruleset de Terraform que trae incluido: `pnpm lint:infra`
+  tflint:
+    image: ghcr.io/terraform-linters/tflint:v0.64.0
+    profiles: ["tools"]
+    working_dir: /work
+    volumes:
+      - ./:/work
+    network_mode: none
+
+volumes:
+  terraform-plugins:
 
 networks:
   floci-net:

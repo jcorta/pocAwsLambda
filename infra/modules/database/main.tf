@@ -2,9 +2,10 @@
 # La contraseña se genera con random_password (no con el secreto gestionado por RDS) para que sea igual en Floci.
 
 terraform {
+  required_version = ">= 1.10"
   required_providers {
-    aws    = { source = "hashicorp/aws" }
-    random = { source = "hashicorp/random" }
+    aws    = { source = "hashicorp/aws", version = "~> 6.0" }
+    random = { source = "hashicorp/random", version = "~> 3.0" }
   }
 }
 

@@ -1,6 +1,13 @@
 # Frontend (SPEC §7.4): bucket S3 con el sitio estático y el config.json de runtime (SPEC §5.2).
 # Los archivos del sitio no los sube Terraform: los sube `deploy:web:local` (y en AWS, el pipeline).
 
+terraform {
+  required_version = ">= 1.10"
+  required_providers {
+    aws = { source = "hashicorp/aws", version = "~> 6.0" }
+  }
+}
+
 variable "name" {
   type = string
 }
@@ -12,6 +19,7 @@ variable "runtime_config" {
 
 # CloudFront delante del bucket es para AWS real (F7). Sin CloudFront, el bucket sirve el sitio con
 # website hosting y lectura pública, como en Floci.
+# tflint-ignore: terraform_unused_declarations # hasta F7 solo existe por su validación
 variable "enable_cloudfront" {
   type    = bool
   default = false

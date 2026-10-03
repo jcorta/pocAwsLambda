@@ -1,5 +1,12 @@
 # Autenticación (SPEC §7.4): Cognito User Pool con email como usuario, app client público y grupo admin.
 
+terraform {
+  required_version = ">= 1.10"
+  required_providers {
+    aws = { source = "hashicorp/aws", version = "~> 6.0" }
+  }
+}
+
 variable "name" {
   type = string
 }

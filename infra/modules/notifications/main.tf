@@ -1,5 +1,12 @@
 # Notificaciones (SPEC §7.4): cola SQS con DLQ e identidad del remitente en SES.
 
+terraform {
+  required_version = ">= 1.10"
+  required_providers {
+    aws = { source = "hashicorp/aws", version = "~> 6.0" }
+  }
+}
+
 variable "name" {
   type = string
 }

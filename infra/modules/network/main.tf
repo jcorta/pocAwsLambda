@@ -1,6 +1,13 @@
 # Red (SPEC §7.4): VPC con 2 subnets privadas en AZ distintas y security groups.
 # Floci acepta estos recursos aunque no los aplique (hallazgo del spike F0, punto 5).
 
+terraform {
+  required_version = ">= 1.10"
+  required_providers {
+    aws = { source = "hashicorp/aws", version = "~> 6.0" }
+  }
+}
+
 variable "name" {
   type = string
 }
@@ -17,6 +24,7 @@ variable "availability_zones" {
 
 # Salida de las Lambdas hacia los servicios de AWS (decisión D-3.1, diferida a F7).
 # En Floci no hace falta: Docker conecta todo. "nat" y "endpoints" se implementan en F7.
+# tflint-ignore: terraform_unused_declarations # hasta F7 solo existe por su validación
 variable "network_egress" {
   type    = string
   default = "none"
