@@ -78,10 +78,12 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - **`ci.yml`** corre en cada PR y en cada push a `main`. Jobs:
   - `changes`: detecta si el cambio toca algo más que `docs/` y `*.md`.
   - `lint`: ESLint, Prettier, typecheck, `pnpm lint:infra` y gitleaks sobre los commits del PR.
-  - `unit`: tests unitarios con umbrales de cobertura, build y `check:bundles`.
+  - `unit`: tests unitarios con umbrales de cobertura.
+  - `build`: bundles, `check:bundles` y export de la web. En `main` los sube como artifact `build` para `deploy-aws.yml`.
   - `integration`: Testcontainers, con umbral de cobertura.
   - `infra-test`: `pnpm test:infra`.
   - `e2e-local`: `pnpm local:up`, `pnpm test:e2e` y `pnpm local:reset` en el runner. Es el job más lento, de unos 5 minutos.
+- **`deploy-aws.yml`** (SPEC §9.2): deploy a AWS, preparado y **deshabilitado hasta F7**. Solo corre a mano, desde `main` y con la variable `AWS_DEPLOY_ENABLED=true`. No se habilita ni se le cargan variables sin aprobación.
 - **`spike-f0.yml`** corre el spike de Floci cuando cambia `spikes/f0-floci/**`, o a mano.
 - **Un job nuevo que sea pesado** (integración, build, E2E) se condiciona con `if: needs.changes.outputs.code == 'true'`, así se saltea en los PRs que solo tocan documentación sin quedar pendiente.
 - **Antes de pedir un merge**, la CI del PR tiene que estar en verde. Se sigue con `gh pr checks <n> --watch`.

@@ -828,8 +828,8 @@ Se dispara en cada pull request y en cada push a `main`. Usa `concurrency` para 
 | `unit` | Tests unitarios de API y web con cobertura. Falla si no se alcanzan los umbrales de §8.4 |
 | `integration` | Tests con Testcontainers (el runner `ubuntu-latest` trae Docker) |
 | `infra-test` | `terraform test` en los módulos |
-| `build` | Zips de las Lambdas y export estático de la web, subidos como artifacts |
-| `e2e-local` | 1. `pnpm local:up`, que hace `doctor`, Floci, build, `terraform apply`, migrator y seed, igual que en una máquina de desarrollo. 2. E2E de la API. 3. (F5) Deploy de la web al S3 de Floci y E2E de la UI. Si falla, muestra los logs de Floci y de cada Lambda. Siempre termina con `pnpm local:reset`. **Compila por su cuenta**: la reutilización de los artifacts de `build` llega en F6, cuando la necesite `deploy-aws.yml` |
+| `build` | Bundles de las Lambdas, `check:bundles` y export estático de la web. En los push a `main` los sube como artifact `build` (14 días), que usa `deploy-aws.yml`. En los PR no los sube, para no gastar almacenamiento. Terraform arma los zips con `archive_file` (§7.4) |
+| `e2e-local` | 1. `pnpm local:up`, que hace `doctor`, Floci, build, `terraform apply`, migrator y seed, igual que en una máquina de desarrollo. 2. E2E de la API. 3. (F5) Deploy de la web al S3 de Floci y E2E de la UI. Si falla, muestra los logs de Floci y de cada Lambda. Siempre termina con `pnpm local:reset`. **Compila por su cuenta**, igual que `local:up` en una máquina de desarrollo. Los artifacts de `build` los usa solo `deploy-aws.yml` |
 
 - **`e2e-local` corre en cada PR y en cada push a `main`** (decisión D-3.2). Es un check requerido para mergear.
 - **Filtros por ruta:** si un PR solo modifica documentación (`docs/**`, `**/*.md`), los jobs `integration`, `infra-test`, `build` y `e2e-local` se saltean. Se implementa con un job inicial `changes` (por ejemplo, con `dorny/paths-filter`) y condiciones `if:` en cada job. **No** se usa `paths-ignore` a nivel workflow: así los checks requeridos quedan como "omitidos" (cuentan como aprobados) en lugar de quedar pendientes para siempre.
@@ -851,8 +851,13 @@ Se dispara en cada pull request y en cada push a `main`. Usa `concurrency` para 
   4. `terraform apply` del plan guardado.
   5. Migrator.
   6. Deploy de la web (`aws s3 sync` e invalidación de CloudFront).
-  7. Smoke tests: el subconjunto de E2E API sin datos destructivos.
-- Reutiliza los artifacts de `build` del commit, así no se recompila.
+  7. Smoke tests (`scripts/aws/smoke.mjs`), que solo leen y no crean datos: el sitio y su `config.json`, `401` de la API sin token, el preflight CORS desde el origen del sitio y la JWKS de Cognito. Los E2E de la API no sirven en AWS, porque crean usuarios con la API de administración de Cognito y leen los emails de `/_aws/ses` de Floci.
+- Reutiliza los artifacts de `build` del commit, así no se recompila. Busca la ejecución de `ci.yml` en verde de ese commit en `main`, y falla si no existe.
+- **Dos jobs:**
+  - `plan`, sin environment: el token OIDC lleva la rama `main`. Sube el plan y los zips de `archive_file` como artifact `tfplan`.
+  - `apply`, en el environment `aws` con aprobación manual: el token OIDC lleva el environment. Aplica el plan guardado y sigue con los pasos 5 a 7.
+- **Variables del repo** (no hay secretos): `AWS_DEPLOY_ENABLED`, `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN` y `AWS_STATE_BUCKET` (outputs de `infra/bootstrap`), y `SES_FROM`.
+- Terraform corre en el mismo contenedor que en local (`docker compose run terraform`), con las credenciales temporales por variables de entorno.
 
 ### 9.3 Repositorio y secretos (decisión D-3.3)
 - **El repositorio empieza privado** y se hace público cuando el proyecto esté pulido y funcionando (ver la checklist más abajo).
