@@ -1,4 +1,4 @@
-# CI de cada PR y de main (SPEC §9.1): changes, lint, unit, integration, infra-test y e2e-local.
+# CI de cada PR y de main (SPEC §9.1): changes, lint, unit, integration, infra-test, build y e2e-local.
 name: ci
 
 on:
@@ -113,9 +113,9 @@ jobs:
       - run: node scripts/infra.mjs test
 
   # E2E de punta a punta contra Floci: el mismo `pnpm local:up` que en una máquina de desarrollo.
-  # Compila por su cuenta en lugar de descargar artifacts (decisión de F3; los artifacts llegan en F6).
+  # Compila por su cuenta, como en una máquina de desarrollo; los artifacts de `build` son para deploy-aws.yml.
   e2e-local:
-    needs: [changes, lint, unit, integration, infra-test]
+    needs: [changes, lint, unit, integration, infra-test, build]
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -169,6 +169,38 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-      # Bundles de las Lambdas: se generan y se verifica que carguen (SPEC §6.5)
+
+  # Bundles de las Lambdas y export estático de la web (SPEC §9.1). En main se suben como artifact `build`,
+  # que deploy-aws.yml descarga para desplegar exactamente lo que se probó, sin recompilar (§9.2).
+  build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # Verifica que cada bundle cargue (SPEC §6.5)
       - run: pnpm --filter @reservas/api check:bundles
+
+      # Solo en main: es lo único que se despliega, y así los PRs no gastan el almacenamiento de artifacts
+      - name: Subir los bundles como artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build
+          path: |
+            services/api/dist/lambdas/
+            apps/web/out/
+          if-no-files-found: error
+          retention-days: 14

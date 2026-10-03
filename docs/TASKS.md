@@ -95,8 +95,8 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 - [x] Umbrales de cobertura aplicados en la CI (§8.4)
 - [x] `infra/envs/aws` e `infra/bootstrap` completos, sin aplicar (CloudFront y la salida de red quedan para F7)
 - [x] Access logs del stage `$default` de API Gateway (SPEC §7.4), Floci acepta la configuración (lo verifica un E2E) pero no los escribe (hallazgo A10)
-- [ ] `deploy-aws.yml` preparado y deshabilitado
-- [ ] Job `build` que sube los bundles como artifacts para `deploy-aws.yml` (requiere aprobar `actions/upload-artifact` y `download-artifact`)
+- [x] `deploy-aws.yml` preparado y deshabilitado (plan, apply con aprobación, migrator, sitio y smoke tests)
+- [x] Job `build` que sube los bundles como artifacts para `deploy-aws.yml` (solo en `main`)
 - [ ] README con guía de inicio, verificada en una máquina limpia
 - [ ] Checklist para hacer público el repo (§9.3)
 

@@ -1,0 +1,145 @@
+# Deploy a AWS real (SPEC §9.2). Preparado en F6 y deshabilitado hasta F7:
+#   - Solo se dispara a mano, desde main, y solo si la variable del repo AWS_DEPLOY_ENABLED es 'true'.
+#   - El apply pasa por el environment `aws`, con aprobación manual y limitado a la rama main.
+# Despliega los artifacts `build` de la CI del mismo commit, así no se recompila lo que ya se probó.
+#
+# Variables del repo que necesita (Settings → Secrets and variables → Actions → Variables), todas de F7:
+#   AWS_DEPLOY_ENABLED  'true' para habilitarlo
+#   AWS_REGION          región de envs/aws
+#   AWS_DEPLOY_ROLE_ARN output deploy_role_arn de infra/bootstrap
+#   AWS_STATE_BUCKET    output state_bucket de infra/bootstrap
+#   SES_FROM            remitente verificado en SES
+# No hay secretos: las credenciales son temporales, por OIDC.
+name: deploy-aws
+
+on:
+  workflow_dispatch:
+
+# Un deploy por vez, sin cancelar uno que ya está aplicando
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TF_DIR: infra/envs/aws
+  # Terraform corre en su contenedor (docker-compose.yml) y recibe las credenciales por el entorno
+  TF: >-
+    docker compose run --rm -T --no-deps
+    -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_REGION -e TF_VAR_region -e TF_VAR_ses_from
+    terraform -chdir=infra/envs/aws
+  TF_VAR_region: ${{ vars.AWS_REGION }}
+  TF_VAR_ses_from: ${{ vars.SES_FROM }}
+
+jobs:
+  plan:
+    if: vars.AWS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC: el rol de infra/bootstrap acepta tokens de main
+      actions: read # descargar los artifacts de otra ejecución
+    outputs:
+      ci_run_id: ${{ steps.ci.outputs.run_id }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Buscar la CI en verde de este commit
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --event push --status success \
+            --json databaseId --jq '.[0].databaseId')
+          if [ -z "$run_id" ]; then echo "::error::No hay una CI en verde en main para $GITHUB_SHA"; exit 1; fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Descargar los bundles de esa CI
+        uses: actions/download-artifact@v8
+        with:
+          name: build
+          run-id: ${{ steps.ci.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: terraform init
+        run: |
+          printf 'bucket = "%s"\nregion = "%s"\n' "${{ vars.AWS_STATE_BUCKET }}" "${{ vars.AWS_REGION }}" > "$TF_DIR/backend.hcl"
+          $TF init -input=false -backend-config=backend.hcl
+
+      - name: terraform plan
+        run: $TF plan -input=false -out=tfplan
+
+      # El plan y los zips que armó archive_file: el apply usa exactamente estos archivos
+      - name: Subir el plan
+        uses: actions/upload-artifact@v7
+        with:
+          name: tfplan
+          path: |
+            ${{ env.TF_DIR }}/tfplan
+            ${{ env.TF_DIR }}/.build/
+          if-no-files-found: error
+          retention-days: 3
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    # Aprobación manual (SPEC §9.2). El environment se configura para aceptar solo main
+    environment: aws
+    permissions:
+      contents: read
+      id-token: write # OIDC: el rol de infra/bootstrap acepta tokens del environment aws
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Descargar el plan
+        uses: actions/download-artifact@v8
+        with:
+          name: tfplan
+          path: ${{ env.TF_DIR }}
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: terraform apply
+        run: |
+          printf 'bucket = "%s"\nregion = "%s"\n' "${{ vars.AWS_STATE_BUCKET }}" "${{ vars.AWS_REGION }}" > "$TF_DIR/backend.hcl"
+          $TF init -input=false -backend-config=backend.hcl
+          $TF apply -input=false tfplan
+          $TF output -json > outputs.json
+
+      - name: Migraciones (Lambda migrator)
+        run: |
+          fn=$(jq -r '.migrator_function_name.value' outputs.json)
+          error=$(aws lambda invoke --function-name "$fn" migrator.json --query FunctionError --output text)
+          cat migrator.json; echo
+          if [ "$error" != "None" ]; then echo "::error::El migrator falló"; exit 1; fi
+
+      - name: Descargar el sitio de la CI
+        uses: actions/download-artifact@v8
+        with:
+          name: build
+          run-id: ${{ needs.plan.outputs.ci_run_id }}
+          github-token: ${{ github.token }}
+
+      # config.json lo escribe Terraform: el sync no lo toca (SPEC §5.2)
+      - name: Publicar el sitio
+        run: |
+          bucket=$(jq -r '.frontend_bucket.value' outputs.json)
+          aws s3 sync apps/web/out/ "s3://$bucket/" --delete --exclude config.json
+          # Con CloudFront (F7), acá va la invalidación: aws cloudfront create-invalidation --paths '/*'
+
+      - name: Smoke tests
+        run: node scripts/aws/smoke.mjs outputs.json
