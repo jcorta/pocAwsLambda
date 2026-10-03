@@ -20,8 +20,10 @@ export default defineConfig({
         "src/infra/runtime.ts",
       ],
       reporter: ["text-summary", "text"],
-      // SPEC §8.4: el dominio exige 90 % de líneas. El umbral total de la API (80 %) se aplica en F6.
+      // SPEC §8.4: 80 % de líneas en total y 90 % en el dominio. Lo que se excluye acá lo mide
+      // la cobertura de los tests de integración (vitest.integration.config.ts), con el mismo 80 %.
       thresholds: {
+        lines: 80,
         "src/domain/**": { lines: 90 },
       },
     },

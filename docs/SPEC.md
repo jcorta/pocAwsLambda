@@ -794,6 +794,8 @@ Son los puntos donde la "transparencia" puede romperse:
 | `services/api` (total) | 80 % |
 | `apps/web` | Sin umbral, solo se reporta |
 
+El total de `services/api` se mide en dos partes, porque los tests unitarios no tocan la base: los unitarios cubren todo menos el código que depende de Postgres, y los de integración cubren ese código (esquema, repositorios, servicios y rutas). Cada parte exige 80 %. Los entrypoints de las Lambdas quedan afuera: los prueban `check:bundles` y los E2E.
+
 ---
 
 ## 9. Pipeline CI/CD (GitHub Actions)

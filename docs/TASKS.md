@@ -91,8 +91,8 @@ Referencia: [`docs/SPEC.md`](SPEC.md).
 ## [ ] F6 — Endurecimiento
 > Terminado cuando: un desarrollador nuevo levanta todo siguiendo solo el README.
 
-- [ ] `terraform test` con las aserciones de §8.2 y `tflint` (job `infra-test`)
-- [ ] Umbrales de cobertura aplicados en la CI (§8.4)
+- [x] `terraform test` con las aserciones de §8.2 y `tflint` (job `infra-test`; tflint con el ruleset de Terraform incluido)
+- [x] Umbrales de cobertura aplicados en la CI (§8.4)
 - [ ] `infra/envs/aws` e `infra/bootstrap` completos, sin aplicar
 - [ ] Access logs del stage `$default` de API Gateway (SPEC §7.4), verificando que Floci los acepte
 - [ ] `deploy-aws.yml` preparado y deshabilitado
