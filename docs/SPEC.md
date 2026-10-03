@@ -697,7 +697,7 @@ Hasta F7, `envs/aws` usa `enable_cloudfront = false` y `network_egress = "none"`
   - `aws_ses_email_identity` (o `domain_identity` en AWS) para el remitente.
 - **api:**
   - `aws_apigatewayv2_api` HTTP con CORS, JWT authorizer (`issuer = var.cognito_issuer_url`, `audience = [clientId]`) y stage `$default` con auto-deploy y access logs.
-  - Los access logs van al log group `/aws/apigateway/<nombre>-api`, con 14 días de retención: una línea JSON por request con `requestId`, `lambdaRequestId` (el `x-request-id` que devuelve la Lambda, para cruzar con sus logs), `routeKey`, `status`, latencias y errores de integración y del authorizer. En local se ven con `pnpm local:logs api`.
+  - Los access logs van al log group `/aws/apigateway/<nombre>-api`, con 14 días de retención: una línea JSON por request con `requestId`, `lambdaRequestId` (el `x-request-id` que devuelve la Lambda, para cruzar con sus logs), `routeKey`, `status`, latencias y errores de integración y del authorizer. Floci acepta la configuración pero no escribe las líneas (hallazgo A10). En AWS se leen en CloudWatch Logs.
   - Una `aws_apigatewayv2_route` por ruta de §4.5, con su integración `AWS_PROXY` a la Lambda del dominio.
   - Lambdas `me`, `resources`, `bookings`, `admin`, `notifier` y `migrator`, en las subnets privadas con el SG `lambda`.
   - Un rol IAM por Lambda, con los permisos de §6.7.
@@ -780,7 +780,7 @@ Son los puntos donde la "transparencia" puede romperse:
 - `infra/bootstrap`: el bucket del state bloquea el acceso público y el rol de deploy solo lo asume este repo, desde `main` o desde el environment `aws`.
 - `envs/aws`: emisor de Cognito y URL de la API de AWS, y valores por defecto de §7.3.
 
-**E2E API (access logs):** API Gateway de Floci escribe la línea de access log de cada request, con el `lambdaRequestId` que devuelve la Lambda.
+**E2E API (access logs):** el stage `$default` desplegado en Floci tiene los access logs configurados hacia su log group, con el formato de §7.4. Floci no escribe las líneas (hallazgo A10), así que se verifica la configuración y no el contenido.
 
 **E2E API:**
 - `401` sin token. `401 INVALID_TOKEN_TYPE` con el access token en lugar del ID token. `403` cuando un `user` llama a `/admin`.

@@ -56,7 +56,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm test:e2e:ui` | E2E de UI con Playwright contra el sitio en S3. Requiere `local:up` y `deploy:web:local`; el proxy lo levanta Playwright. La primera vez: `pnpm --filter @reservas/web exec playwright install chromium` |
 | `pnpm deploy:local` | Ciclo rápido tras cambiar el backend: build, Terraform y migraciones (~50 s) |
 | `pnpm local:seed` | Seed idempotente: usuarios de `.env.local` y 3 recursos de ejemplo |
-| `pnpm local:logs [lambda\|api]` | Logs de Floci, de una Lambda (`me`, `resources`, `bookings`, `admin`, `migrator` o `notifier`) o los access logs de API Gateway (`api`) |
+| `pnpm local:logs [lambda\|api]` | Logs de Floci, de una Lambda (`me`, `resources`, `bookings`, `admin`, `migrator` o `notifier`) o los access logs de API Gateway (`api`, vacíos en Floci por el hallazgo A10) |
 | `pnpm local:down` / `pnpm local:reset` | Baja el entorno y borra los volúmenes de Floci. `reset` además borra el state y lo generado (conserva `.env.local`) |
 | `pnpm typecheck` | `tsc --noEmit` en cada paquete |
 | `pnpm lint` | ESLint en todo el repo |
@@ -156,6 +156,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 - Los clientes de AWS se crean **sin endpoint explícito**: Floci inyecta `AWS_ENDPOINT_URL` en cada Lambda.
 - La Lambda rechaza los tokens con `token_use` distinto de `id` (A3).
 - `cognito:groups` llega a la Lambda como string `"[admin]"`. El parser acepta un array o un string.
+- API Gateway acepta los access logs del stage pero no los escribe (A10): el E2E verifica la configuración, no las líneas.
 - La configuración obligatoria de Floci está en SPEC §10 (A1). La imagen va fijada en `floci/floci:2.1.0`; actualizarla implica volver a correr el spike.
 
 ### Tests

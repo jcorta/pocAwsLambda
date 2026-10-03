@@ -158,28 +158,23 @@ function terraformOutput(name: string): string {
   }).trim();
 }
 
-/** Access logs de API Gateway desde `since` (ms), por la API JSON de CloudWatch Logs de Floci. */
-export async function accessLogs(since: number): Promise<Record<string, string>[]> {
-  const res = await fetch(FLOCI_URL, {
-    method: "POST",
+export const ACCESS_LOG_GROUP = terraformOutput("api_access_log_group");
+
+/**
+ * El stage `$default` tal como lo guardó API Gateway de Floci (GetStage de la API REST de apigatewayv2).
+ * Floci acepta y devuelve la configuración de access logs, pero no los escribe (hallazgo A10).
+ */
+export async function defaultStage(): Promise<{ accessLogSettings?: { destinationArn?: string; format?: string } }> {
+  const apiId = new URL(API_URL).hostname.split(".")[0]!;
+  const res = await fetch(`${FLOCI_URL}/v2/apis/${apiId}/stages/$default`, {
     headers: {
-      "content-type": "application/x-amz-json-1.1",
-      "x-amz-target": "Logs_20140328.FilterLogEvents",
       // Floci rutea por el servicio de la firma; la firma en sí no se valida
       authorization:
-        "AWS4-HMAC-SHA256 Credential=test/20260101/us-east-1/logs/aws4_request, SignedHeaders=host, Signature=x",
+        "AWS4-HMAC-SHA256 Credential=test/20260101/us-east-1/apigateway/aws4_request, SignedHeaders=host, Signature=x",
     },
-    body: JSON.stringify({ logGroupName: terraformOutput("api_access_log_group"), startTime: since }),
   });
-  if (!res.ok) throw new Error(`CloudWatch Logs respondió ${res.status}: ${await res.text()}`);
-  const { events = [] } = (await res.json()) as { events?: { message: string }[] };
-  return events.map((e) => {
-    try {
-      return JSON.parse(e.message) as Record<string, string>;
-    } catch {
-      return { raw: e.message };
-    }
-  });
+  if (!res.ok) throw new Error(`API Gateway respondió ${res.status}: ${await res.text()}`);
+  return (await res.json()) as { accessLogSettings?: { destinationArn?: string; format?: string } };
 }
 
 export const ALL_WEEK = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, opensAt: "08:00", closesAt: "12:00" }));

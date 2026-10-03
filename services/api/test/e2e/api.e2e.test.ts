@@ -12,12 +12,13 @@ import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
-  accessLogs,
+  ACCESS_LOG_GROUP,
   ALL_WEEK,
   api,
   capturedEmails,
   createUser,
   dayFromToday,
+  defaultStage,
   FLOCI_URL,
   waitForEmail,
   type TestUser,
@@ -78,23 +79,12 @@ describe("autenticación y autorización", () => {
     expect(MeSchema.parse((await api("GET", "/v1/me", { token: admin.idToken })).body).roles).toEqual(["admin"]);
   });
 
-  it("API Gateway escribe un access log por request, cruzable con el x-request-id de la Lambda", async () => {
-    const since = Date.now() - 5_000;
-    const res = await api("GET", "/v1/me", { token: admin.idToken });
-    const lambdaRequestId = res.headers.get("x-request-id");
-
-    let logs: Record<string, string>[] = [];
-    const until = Date.now() + 15_000;
-    while (Date.now() < until) {
-      logs = await accessLogs(since);
-      if (logs.some((l) => l["lambdaRequestId"] === lambdaRequestId)) break;
-      await new Promise((r) => setTimeout(r, 500));
-    }
-    const line = logs.find((l) => l["lambdaRequestId"] === lambdaRequestId);
-    expect(line, `access logs recibidos: ${JSON.stringify(logs.slice(-5))}`).toMatchObject({
-      routeKey: "GET /v1/me",
-      status: "200",
-    });
+  it("el stage $default tiene los access logs configurados hacia su log group (Floci no los escribe, hallazgo A10)", async () => {
+    const { accessLogSettings } = await defaultStage();
+    expect(accessLogSettings?.destinationArn).toContain(ACCESS_LOG_GROUP);
+    expect(Object.keys(JSON.parse(accessLogSettings?.format ?? "{}"))).toEqual(
+      expect.arrayContaining(["requestId", "lambdaRequestId", "routeKey", "status"]),
+    );
   });
 
   it("CORS: el preflight desde el frontend local devuelve el origen permitido", async () => {
