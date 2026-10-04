@@ -101,6 +101,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      # Los pasos posteriores al apply usan el AWS SDK (scripts/aws/post-apply.mjs)
+      - run: pnpm install --frozen-lockfile
 
       - name: Descargar el plan
         uses: actions/download-artifact@v8
@@ -120,13 +127,6 @@ jobs:
           $TF apply -input=false tfplan
           $TF output -json > outputs.json
 
-      - name: Migraciones (Lambda migrator)
-        run: |
-          fn=$(jq -r '.migrator_function_name.value' outputs.json)
-          error=$(aws lambda invoke --function-name "$fn" migrator.json --query FunctionError --output text)
-          cat migrator.json; echo
-          if [ "$error" != "None" ]; then echo "::error::El migrator falló"; exit 1; fi
-
       - name: Descargar el sitio de la CI
         uses: actions/download-artifact@v8
         with:
@@ -134,12 +134,9 @@ jobs:
           run-id: ${{ needs.plan.outputs.ci_run_id }}
           github-token: ${{ github.token }}
 
-      # config.json lo escribe Terraform: el sync no lo toca (SPEC §5.2)
-      - name: Publicar el sitio
-        run: |
-          bucket=$(jq -r '.frontend_bucket.value' outputs.json)
-          aws s3 sync apps/web/out/ "s3://$bucket/" --delete --exclude config.json
-          # Con CloudFront (F7), acá va la invalidación: aws cloudfront create-invalidation --paths '/*'
+      # Igual que `pnpm aws:deploy`: migrator y sync del sitio sin tocar config.json (SPEC §5.2)
+      - name: Migraciones y publicación del sitio
+        run: node scripts/aws/post-apply.mjs outputs.json
 
       - name: Smoke tests
         run: node scripts/aws/smoke.mjs outputs.json

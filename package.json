@@ -16,6 +16,9 @@
     "local:reset": "node scripts/local/down.mjs --reset",
     "deploy:local": "node scripts/local/deploy.mjs",
     "deploy:web:local": "node scripts/local/deploy-web.mjs",
+    "aws:deploy": "node scripts/aws/deploy.mjs",
+    "aws:admin": "node scripts/aws/admin.mjs",
+    "aws:destroy": "node scripts/aws/destroy.mjs",
     "test:e2e:ui": "pnpm --filter @reservas/web test:e2e:ui",
     "secrets:staged": "node scripts/gitleaks.mjs --staged",
     "secrets:history": "node scripts/gitleaks.mjs --all",
@@ -35,6 +38,7 @@
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1145.0",
     "@aws-sdk/client-lambda": "^3.1145.0",
+    "@aws-sdk/client-resource-groups-tagging-api": "^3.1146.0",
     "@aws-sdk/client-s3": "^3.1145.0",
     "@eslint/js": "^10.0.1",
     "@types/node": "~24.19.0",

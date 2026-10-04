@@ -1,9 +1,6 @@
-# Entorno en AWS real (SPEC §7, §11). Preparado en F6 y **sin aplicar**: se aplica por primera vez en F7.
-# Usa los mismos módulos que envs/local; las diferencias son el provider, el backend y los valores de §7.3.
-# Pendiente de F7 (los módulos todavía rechazan otros valores):
-#   - network_egress: NAT o VPC endpoints (D-3.1). Con "none" las Lambdas no llegan a Secrets Manager ni a SQS.
-#   - enable_cloudfront: sin CloudFront el sitio se sirve por HTTP desde el website del bucket.
-#   - SES con dominio verificado y Cognito enviando por SES (SPEC §11.1.3).
+# Entorno en AWS, el destino del proyecto (SPEC §7, §11). Usa los mismos módulos que envs/local (Floci);
+# las diferencias son el provider, el backend y los valores de §7.3. Se despliega con `pnpm aws:deploy` o
+# con deploy-aws.yml, y se borra con `pnpm aws:destroy`.
 
 terraform {
   required_version = ">= 1.10"
@@ -58,15 +55,15 @@ variable "lambda_architecture" {
 }
 
 variable "network_egress" {
-  description = "Salida de las Lambdas a los servicios de AWS (D-3.1, se decide en F7)."
+  description = "Salida de las Lambdas a los servicios de AWS: interface endpoints en 1 AZ (D-3.1)."
   type        = string
-  default     = "none"
+  default     = "endpoints"
 }
 
 variable "enable_cloudfront" {
-  description = "CloudFront delante del bucket (F7)."
+  description = "CloudFront delante del bucket: HTTPS, que el login necesita (hallazgo A8)."
   type        = bool
-  default     = false
+  default     = true
 }
 
 provider "aws" {
@@ -121,7 +118,7 @@ module "api" {
   timezone            = var.timezone
   cognito_issuer_url  = "https://cognito-idp.${var.region}.amazonaws.com/${module.auth.user_pool_id}"
   cognito_client_id   = module.auth.client_id
-  # El dominio del sitio: hoy el website del bucket; con CloudFront (F7), el de la distribución
+  # El dominio del sitio: el de la distribución de CloudFront
   cors_origins = [module.frontend.website_url]
 
   notifications_queue_url = module.notifications.queue_url
@@ -153,6 +150,10 @@ output "api_url" {
 
 output "frontend_bucket" {
   value = module.frontend.bucket
+}
+
+output "frontend_distribution_id" {
+  value = module.frontend.distribution_id
 }
 
 output "frontend_url" {

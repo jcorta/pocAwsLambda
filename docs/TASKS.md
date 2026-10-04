@@ -114,13 +114,20 @@ Revisada el 2026-10-03. Lo que queda abierto lo hace el dueño del repo en GitHu
 ## [ ] F7 — Despliegue en AWS *(el objetivo del proyecto)*
 > Terminado cuando: los smoke tests están en verde en AWS y `deploy-aws.yml` está habilitado y probado.
 
-- [ ] Decidir D-3.1 (NAT o VPC endpoints) e implementarlo en el módulo `network` (hoy solo admite `network_egress = "none"`)
-- [ ] Aplicar `infra/bootstrap` (bucket del state y rol OIDC)
-- [ ] SES: dominio verificado, salida del sandbox y Cognito enviando por SES
-- [ ] Primer deploy manual, migrator y web
-- [ ] Habilitar `AWS_DEPLOY_ENABLED` y probar `deploy-aws.yml`
-- [ ] Smoke tests y registro real con código de verificación
-- [ ] `terraform destroy` cuando ya no se use
+**Código (PR F7-A, sin tocar AWS):**
+- [x] D-3.1 resuelta: interface endpoints de Secrets Manager, SQS y SES en 1 AZ (`network_egress = "endpoints"`)
+- [x] CloudFront en el módulo `frontend`: bucket privado con OAC, HTTPS, función de índices y cache sin invalidaciones
+- [x] Bootstrap borrable y `envs/aws` con endpoints y CloudFront
+- [x] `pnpm aws:deploy`, `pnpm aws:admin` y `pnpm aws:destroy` (borra en orden y verifica por tags antes de tocar el bootstrap)
+- [x] `deploy-aws.yml` usa los mismos pasos posteriores al apply (`scripts/aws/post-apply.mjs`)
+
+**Sesión en AWS (§11.1):**
+- [ ] Prerequisitos: AWS CLI v2 con sesión iniciada, alerta de Budgets de 1 USD y `terraform.tfvars`
+- [ ] `pnpm aws:deploy`, verificación del remitente de SES y smoke tests
+- [ ] Registro real con código de verificación, `aws:admin` y los recorridos de §8.2 a mano, con emails
+- [ ] Repo público, environment `aws`, variables del repo y `AWS_DEPLOY_ENABLED=true`
+- [ ] Un cambio de lógica en una Lambda desplegado por PR y `deploy-aws.yml`
+- [ ] `pnpm aws:destroy` (todo, incluido el bootstrap) y borrar `AWS_DEPLOY_ENABLED`
 
 ---
 

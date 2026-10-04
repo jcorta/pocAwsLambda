@@ -1,9 +1,9 @@
-# Copiar a terraform.tfvars (está en .gitignore) y completar en F7 (SPEC §11.1).
+# Copiar a terraform.tfvars (está en .gitignore). `pnpm aws:deploy` lo pide si falta (SPEC §11.1).
 # Las variables que no aparecen toman los valores de SPEC §7.3 (ver main.tf).
 
-region   = "us-east-1"
-ses_from = "no-reply@tu-dominio.example"
+region = "us-east-1"
 
-# Se deciden en F7; hoy los módulos solo admiten estos valores:
-# network_egress    = "none"   # "nat" o "endpoints" (D-3.1)
-# enable_cloudfront = false
+# Remitente de los emails de reservas: un email tuyo. AWS le manda un link para verificarlo.
+# En el sandbox de SES solo se envía a direcciones verificadas, así que verificá también los
+# emails con los que te registres en el sitio (o usá el mismo).
+ses_from = "tu-email@example.com"
