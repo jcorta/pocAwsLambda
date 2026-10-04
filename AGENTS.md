@@ -5,7 +5,8 @@ Instrucciones para agentes de código que trabajen en este repositorio.
 ## Qué es este proyecto
 POC de un **sistema de reservas de recursos por turnos**, que garantiza que no haya dobles reservas.
 - **Stack:** API Gateway HTTP API, Lambdas en Node.js/TypeScript, RDS PostgreSQL, Cognito, SQS, SES y frontend Next.js estático en S3.
-- **Infra:** Terraform. Corre en **Floci** (emulador local de AWS) y está diseñada para migrar a AWS real sin cambiar los módulos.
+- **Destino: AWS.** La infra es Terraform y `infra/envs/aws` es el entorno objetivo.
+- **Entorno local y de la CI: Floci**, un emulador de AWS (`infra/envs/local`). Usa los mismos módulos: las diferencias viven solo en `infra/envs/*`. Que algo funcione en Floci no alcanza si rompe en AWS. Ante una diferencia, manda el comportamiento de AWS y la particularidad de Floci se resuelve en el entorno local.
 
 ## Fuentes de verdad (leer antes de cambiar algo)
 | Archivo | Qué contiene |
@@ -30,7 +31,7 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 - Hecho: F4, notificaciones (SQS, `notifier` idempotente y SES; E2E de emails en la CI).
 - Hecho: F5, frontend (Next.js estático, auth con Cognito en memoria, páginas de usuario y admin, sitio en S3 y E2E de UI con Playwright en la CI).
 - Hecho: F6, endurecimiento (`terraform test` y tflint, umbrales de cobertura, access logs, `envs/aws` e `infra/bootstrap` sin aplicar, `deploy-aws.yml` deshabilitado, README y checklist de publicación).
-- Próximo: F7, migración a AWS (opcional). Empieza por decidir D-3.1; no se aplica nada en AWS sin aprobación.
+- Próximo: F7, el despliegue en AWS, que es el objetivo del proyecto. Empieza por decidir D-3.1. No se aplica nada en AWS sin aprobación.
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)

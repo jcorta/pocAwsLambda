@@ -1,8 +1,13 @@
-# Reservas: POC serverless sobre AWS, en local con Floci
+# Reservas: POC serverless en AWS
 
-Sistema de **reservas de recursos por turnos** (salas, equipos, canchas…) que garantiza que nunca haya dos reservas sobre el mismo turno. Es una prueba de concepto para practicar una arquitectura serverless de AWS de punta a punta, con infraestructura como código, tests en todos los niveles y CI/CD.
+Sistema de **reservas de recursos por turnos** (salas, equipos, canchas…) que garantiza que nunca haya dos reservas sobre el mismo turno. Es una prueba de concepto de una arquitectura serverless en **AWS**, de punta a punta, con infraestructura como código, tests en todos los niveles y CI/CD.
 
-Todo corre **en tu máquina**, sobre [Floci](https://github.com/floci-io/floci), un emulador local de AWS. La misma infraestructura está preparada para desplegarse en AWS real (fase F7, opcional).
+| Entorno | Para qué | Infra |
+|---|---|---|
+| **AWS** | El destino del proyecto | `infra/envs/aws`, deploy con `deploy-aws.yml` |
+| **Local** | Desarrollar y probar sin costo, en tu máquina y en la CI, sobre [Floci](https://github.com/floci-io/floci), un emulador de AWS | `infra/envs/local`, con los mismos módulos de Terraform |
+
+**Estado:** la aplicación, la infraestructura y el pipeline están completos y probados en el entorno local. El primer despliegue en AWS es la fase siguiente, F7 (ver [Despliegue en AWS](#despliegue-en-aws)).
 
 ```
 Navegador ──▶ S3 (Next.js estático) ──▶ API Gateway (HTTP API + JWT de Cognito) ──▶ Lambdas (Node.js) ──▶ RDS PostgreSQL
@@ -19,7 +24,7 @@ Navegador ──▶ S3 (Next.js estático) ──▶ API Gateway (HTTP API + JWT
 | **Frontend** | Next.js 16 con export estático, React 19, Tailwind 4 y TanStack Query |
 | **Infra** | Terraform con módulos compartidos y un root por entorno (`envs/local`, `envs/aws`) |
 | **Tests** | Vitest (unit e integración con Testcontainers), `terraform test`, E2E de la API y Playwright |
-| **CI/CD** | GitHub Actions: lint, tests, build y E2E contra Floci en cada PR. El deploy a AWS está preparado y deshabilitado |
+| **CI/CD** | GitHub Actions: lint, tests, build y E2E contra el entorno local en cada PR. Deploy a AWS por OIDC, que se habilita en F7 |
 
 ## Prerequisitos
 
@@ -30,7 +35,7 @@ Solo necesitás dos cosas instaladas. Lo demás (Floci, Terraform, Postgres de l
 
 Funciona igual en Windows, macOS y Linux.
 
-## Inicio rápido
+## Inicio rápido (entorno local)
 
 ```sh
 git clone https://github.com/jcorta/pocAwsLambda.git
@@ -110,14 +115,24 @@ docs/              Especificación, tareas y resultados del spike de Floci
 
 ## Documentación
 
-- [`docs/SPEC.md`](docs/SPEC.md): la especificación completa. Incluye las reglas de negocio, el contrato de la API, la arquitectura, la infra, la estrategia de tests, el CI/CD y la migración a AWS.
+- [`docs/SPEC.md`](docs/SPEC.md): la especificación completa. Incluye las reglas de negocio, el contrato de la API, la arquitectura, la infra, la estrategia de tests, el CI/CD y el despliegue en AWS.
 - [`docs/TASKS.md`](docs/TASKS.md): las fases de implementación y su avance.
 - [`docs/spikes/floci.md`](docs/spikes/floci.md): qué funciona en Floci y las diferencias con AWS encontradas en el camino (hallazgos A1 a A10).
 - [`AGENTS.md`](AGENTS.md): convenciones del repo, para personas y para agentes de código.
 
-## AWS real
+## Despliegue en AWS
 
-`infra/envs/aws`, `infra/bootstrap` y `.github/workflows/deploy-aws.yml` están completos y validados con `terraform test`, pero **nunca se aplicaron**. Antes de desplegar falta decidir la salida de red de las Lambdas (NAT Gateway o VPC endpoints), sumar CloudFront y verificar el dominio de SES. Los pasos y el costo estimado están en [SPEC §11](docs/SPEC.md#11-migración-a-aws-real-y-riesgos).
+Es el objetivo del proyecto y la fase siguiente (F7). Ya están listos:
+- **`infra/bootstrap`:** el bucket del state y el rol que GitHub Actions asume por OIDC, sin claves guardadas.
+- **`infra/envs/aws`:** el entorno completo, con los mismos módulos que el local.
+- **`.github/workflows/deploy-aws.yml`:** plan, aprobación manual, apply, migraciones, publicación del sitio y smoke tests.
+
+Todo está validado con `terraform test`, pero todavía no se aplicó. Antes del primer despliegue falta:
+- Decidir la salida de red de las Lambdas: NAT Gateway, instancia NAT o VPC endpoints.
+- Sumar CloudFront.
+- Verificar el dominio de SES.
+
+Los pasos y el costo estimado están en [SPEC §11](docs/SPEC.md#11-despliegue-en-aws-y-riesgos).
 
 ## Licencia
 
