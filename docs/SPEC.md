@@ -15,7 +15,7 @@ Una organización tiene recursos compartidos (salas, equipos, canchas, vehículo
 2. **Garantizar que nunca existan dos reservas confirmadas que se solapen sobre el mismo recurso**, incluso bajo concurrencia.
 3. Aplicar reglas de uso justo: límite de reservas activas por usuario, horizonte máximo de reserva y cancelación con anticipación mínima.
 4. Notificar por email las confirmaciones y cancelaciones sin demorar la respuesta al usuario.
-5. Objetivo técnico (POC): ejercitar una arquitectura serverless en AWS (API Gateway, Lambda, RDS, Cognito, SQS, SES, S3), con infraestructura en Terraform, tests en varios niveles y CI/CD, ejecutable en Floci y migrable a AWS real sin cambiar los módulos.
+5. Objetivo técnico (POC): **desplegar y operar en AWS** una arquitectura serverless (API Gateway, Lambda, RDS, Cognito, SQS, SES, S3), con infraestructura en Terraform, tests en varios niveles y CI/CD. AWS es el destino del proyecto. **Floci**, un emulador de AWS, es el entorno de desarrollo local y de la CI: permite construir y probar todo sin costo, con los mismos módulos de Terraform que se aplican en AWS.
 
 ### 1.3 Alcance v1
 - Registro e inicio de sesión con email y contraseña.
@@ -45,8 +45,9 @@ Una organización tiene recursos compartidos (salas, equipos, canchas, vehículo
 | Persistencia | RDS PostgreSQL 16, Drizzle ORM, migraciones versionadas |
 | Notificaciones | SQS, Lambda notificadora y SES |
 | Repo | Monorepo pnpm: `apps/web`, `services/api`, `packages/shared`, `infra/` |
-| Infra | Terraform con módulos compartidos y roots `infra/envs/local` (Floci) e `infra/envs/aws` |
-| CI/CD | GitHub Actions: deploy a Floci y E2E en CI, job a AWS real preparado (OIDC) y deshabilitado |
+| Entornos | **AWS es el destino** (`infra/envs/aws`). Floci es el entorno local y de la CI (`infra/envs/local`), con los mismos módulos |
+| Infra | Terraform con módulos compartidos y un root por entorno: `infra/envs/aws` e `infra/envs/local` |
+| CI/CD | GitHub Actions: en cada PR, tests y E2E contra Floci. Deploy a AWS con OIDC (`deploy-aws.yml`), preparado en F6 y habilitado en F7 |
 
 ---
 
@@ -842,7 +843,7 @@ Se dispara en cada pull request y en cada push a `main`. Usa `concurrency` para 
 - **Objetivo de duración:** menos de 15 minutos.
 
 ### 9.2 Workflow `deploy-aws.yml` (preparado, deshabilitado)
-- Se dispara solo a mano (`workflow_dispatch`) y además requiere la variable de repositorio `AWS_DEPLOY_ENABLED == 'true'`. Hasta la migración (F7) esa variable no existe.
+- Se dispara solo a mano (`workflow_dispatch`) y además requiere la variable de repositorio `AWS_DEPLOY_ENABLED == 'true'`. Hasta el primer despliegue (F7) esa variable no existe.
 - Usa el environment `aws` de GitHub con aprobación manual requerida.
 - Pasos:
   1. Autenticación OIDC (`aws-actions/configure-aws-credentials`) con el rol que crea `infra/bootstrap`, sin claves de larga duración.
@@ -948,9 +949,9 @@ Decisiones de base:
 
 ---
 
-## 11. Migración a AWS real y riesgos
+## 11. Despliegue en AWS y riesgos
 
-### 11.1 Pasos de migración (fase F7)
+### 11.1 Pasos del primer despliegue (fase F7)
 1. **Cuenta y bootstrap:** aplicar `infra/bootstrap`, que crea el bucket del state y el rol OIDC limitado al repo y a la rama `main`.
 2. **Decidir la red** (D-3.1) y completar `envs/aws/terraform.tfvars`.
 3. **SES:**
@@ -1002,7 +1003,7 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 | **F4 Notificaciones** ✔ | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |
 | **F5 Frontend** ✔ | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
 | **F6 Endurecimiento** ✔ | `terraform test`, umbrales de cobertura, `envs/aws` e `infra/bootstrap` completos (sin aplicar), `deploy-aws.yml` deshabilitado, README con guía de inicio | Un desarrollador nuevo levanta todo con `npm run doctor`, `pnpm install` y `pnpm local:up` siguiendo solo el README |
-| **F7 Migración a AWS** (opcional) | Pasos de §11.1 | Smoke tests en verde en AWS real |
+| **F7 Despliegue en AWS** (el objetivo del proyecto) | Pasos de §11.1 | Smoke tests en verde en AWS, y `deploy-aws.yml` habilitado y probado |
 
 ### 12.1 Decisiones de la Parte 3
 - ~~D-3.1 Salida de red de las Lambdas en AWS real~~ → **Diferida a F7.**

@@ -111,8 +111,8 @@ Revisada el 2026-10-03. Lo que queda abierto lo hace el dueño del repo en GitHu
 - [ ] Al publicar: proteger `main` (PR obligatorio con los checks de `ci.yml` en verde) y crear el environment `aws` con aprobación manual, limitado a `main`
 - [ ] Al publicar: volver a correr `pnpm secrets:history` justo antes de cambiar la visibilidad
 
-## [ ] F7 — Migración a AWS real *(opcional)*
-> Terminado cuando: los smoke tests están en verde en AWS real.
+## [ ] F7 — Despliegue en AWS *(el objetivo del proyecto)*
+> Terminado cuando: los smoke tests están en verde en AWS y `deploy-aws.yml` está habilitado y probado.
 
 - [ ] Decidir D-3.1 (NAT o VPC endpoints) e implementarlo en el módulo `network` (hoy solo admite `network_egress = "none"`)
 - [ ] Aplicar `infra/bootstrap` (bucket del state y rol OIDC)
