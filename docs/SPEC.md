@@ -1,6 +1,6 @@
 # Especificación — Sistema de reservas de recursos (POC AWS Lambda)
 
-> Estado: **Especificación v1 completa** (secciones 1–13), ajustada con los resultados del spike F0 ([`docs/spikes/floci.md`](spikes/floci.md)). Única decisión diferida: D-3.1 (red en AWS real, se decide en F7).
+> Estado: **Especificación v1 completa** (secciones 1–13), ajustada con los resultados del spike F0 ([`docs/spikes/floci.md`](spikes/floci.md)). D-3.1 (red en AWS) se resolvió en F7: VPC endpoints en 1 AZ (§12.1).
 > Documento de idea de origen: decisiones técnicas cerradas (ver §1.5).
 
 ---
@@ -444,7 +444,7 @@ En AWS real `cognito.endpoint` se omite, y el SDK usa el endpoint de AWS.
 
 - **`config.json` nunca forma parte del build:**
   - El archivo `apps/web/public/config.json`, que genera `local:up` para `pnpm dev`, está en `.gitignore` y se excluye del export.
-  - El deploy del sitio (`aws s3 sync`) usa `--exclude config.json`, para no pisar ni borrar el que escribió Terraform.
+  - El deploy del sitio (`scripts/s3-sync.mjs`, que usan `deploy:web:local`, `aws:deploy` y `deploy-aws.yml`) nunca sube ni borra `config.json`, para no pisar el que escribió Terraform.
 
 ### 5.3 Autenticación en el cliente
 - **Pantallas de login y registro propias.** No se usa el Hosted UI de Cognito, porque su soporte en Floci no está confirmado y así el flujo es idéntico en los dos entornos.
@@ -674,15 +674,15 @@ provider "aws" {
 | `api_url` (lo calcula el root) | `http://<apiId>.execute-api.localhost.floci.io:4566`. En Floci, `api_endpoint` devuelve una URL con formato de AWS que no sirve (hallazgo A5) | `aws_apigatewayv2_api.api_endpoint` |
 | `cors_origins` | `http://localhost:3000` (`pnpm dev`) y `http://localhost:3002` (sitio en S3 por el proxy, hallazgo A8) | Dominio de CloudFront |
 | `ses_from` | `no-reply@example.com` (Floci verifica al instante) | Remitente del dominio verificado |
-| `network_egress` | `none` | Decisión D-3.1 |
+| `network_egress` | `none` | `endpoints`: interface endpoints de Secrets Manager, SQS y SES en 1 AZ (D-3.1) |
 
-Hasta F7, `envs/aws` usa `enable_cloudfront = false` y `network_egress = "none"`, porque los módulos todavía no admiten otros valores. Con eso, `cors_origins` es el website del bucket. Así el root queda completo y validado (`validate`, `tflint` y `terraform test`), pero no se puede usar en AWS hasta resolver esas dos variables.
+En AWS, `db_deletion_protection = true` impide borrar RDS por error. `pnpm aws:destroy` la desactiva justo antes del `destroy` (§11.1), y así también se omite el snapshot final, que quedaría cobrando.
 
 ### 7.4 Recursos por módulo (resumen)
 - **network:**
   - VPC con 2 subnets privadas en AZ distintas.
   - SG `lambda`, con egress, y SG `db`, con ingress 5432 **solo** desde el SG `lambda`.
-  - La salida a Internet o a servicios AWS se decide en D-3.1.
+  - Salida a los servicios de AWS (D-3.1): con `network_egress = "endpoints"`, interface endpoints (PrivateLink) de `secretsmanager`, `sqs` y `email` (la API de SES), con DNS privado, en `endpoint_az_count` AZ (1 por defecto) y un SG que solo acepta 443 desde el SG `lambda`. Las Lambdas no tienen salida a Internet, y el código no cambia: los SDK resuelven los nombres de siempre a las IP privadas de los endpoints.
 - **database:**
   - `aws_db_instance` con PostgreSQL 16, en subnets privadas, no accesible públicamente y con almacenamiento cifrado.
   - Contraseña generada con `random_password` y guardada en Secrets Manager (`aws_secretsmanager_secret`). Se usa este mecanismo en lugar del secreto gestionado por RDS, para que sea idéntico en Floci.
@@ -706,9 +706,13 @@ Hasta F7, `envs/aws` usa `enable_cloudfront = false` y `network_egress = "none"`
   - Event source mapping SQS → `notifier` con `ReportBatchItemFailures`.
   - El código **lo construye el build** (`pnpm build`, que deja `services/api/dist/lambdas/<nombre>/`). Terraform comprime cada carpeta con `archive_file` (provider `hashicorp/archive`) y la referencia con `source_code_hash`. Así no hace falta una librería de zip en el build.
 - **frontend:**
-  - Bucket S3 con website hosting en local, y bucket privado con CloudFront (OAC) en AWS.
+  - En local, bucket S3 con website hosting y lectura pública.
+  - En AWS (`enable_cloudfront = true`): bucket privado, con todo acceso público bloqueado, que solo lee la distribución de CloudFront por OAC. El sitio va por HTTPS, que el login necesita (hallazgo A8).
+    - Una CloudFront Function (`index-rewrite.js`) resuelve los índices del export estático: `/ruta/` y `/ruta` → `/ruta/index.html`.
+    - Cache: política administrada `CachingDisabled` para el HTML y `config.json`, y `CachingOptimized` para `/_next/static/*`, que lleva hash en el nombre. Así un deploy se ve al instante **sin invalidar** la distribución.
+    - 403 y 404 del origen se responden con `/404.html`. `PriceClass_100` y el certificado por defecto de CloudFront.
   - El objeto `config.json` se genera con los outputs de los otros módulos (§5.2).
-  - Los archivos del sitio **no** los sube Terraform, sino el script de deploy del frontend, con `aws s3 sync` (§9).
+  - Los archivos del sitio **no** los sube Terraform, sino `scripts/s3-sync.mjs`, con el `Content-Type` y el `Cache-Control` de cada archivo (§9 y §11.1).
 
 ### 7.5 Outputs de los roots
 `api_url`, `user_pool_id`, `user_pool_client_id`, `cognito_issuer_url`, `frontend_bucket`, `frontend_url`, `notifications_queue_url`, `dlq_url`, `migrator_function_name`, `db_secret_arn`.
@@ -735,7 +739,7 @@ Son los puntos donde la "transparencia" puede romperse:
   - Backend `s3` con bloqueo nativo (`use_lockfile = true`), así no hace falta DynamoDB. El bucket y la región se pasan con `terraform init -backend-config=backend.hcl` (archivo en `.gitignore`, con `backend.hcl.example` versionado), porque el nombre del bucket incluye el id de la cuenta.
   - El bucket del state y el rol OIDC se crean una sola vez desde `infra/bootstrap`, que usa state local y se aplica a mano.
 - **`infra/bootstrap`:**
-  - Bucket `reservas-tfstate-<account-id>`, con versionado, cifrado, acceso público bloqueado y solo TLS.
+  - Bucket `reservas-tfstate-<account-id>`, con versionado, cifrado, acceso público bloqueado y solo TLS. **Se puede borrar** (sin `prevent_destroy` y con `force_destroy`), porque el POC se despliega, se prueba y se borra entero. Que no se borre mientras queden recursos lo garantiza `pnpm aws:destroy` (§11.1).
   - Proveedor OIDC de GitHub y rol `reservas-github-deploy`. El rol lo asume solo este repo, desde `main` (`repo:<repo>:ref:refs/heads/main`) o desde el environment `aws` (`repo:<repo>:environment:aws`). Con un environment, GitHub firma el token con el environment en lugar de la rama, así que el environment `aws` se configura para aceptar solo `main`.
   - Permisos: `PowerUserAccess`, que cubre todos los servicios menos IAM, más una política que solo administra y pasa a Lambda los roles `reservas-aws-*`.
 
@@ -776,7 +780,9 @@ Son los puntos donde la "transparencia" puede romperse:
 - Cada ruta de §4.5 existe en el plan y no hay rutas `{proxy+}`.
 - Solo los roles de `bookings` y `notifier` tienen permisos sobre SQS, y solo `notifier` tiene permisos sobre SES.
 - RDS no es públicamente accesible y su SG solo acepta tráfico desde el SG `lambda`.
-- Con `enable_cloudfront = false` no se crea ninguna distribución.
+- Con `enable_cloudfront = false` no se crea ninguna distribución. Con `true`, el bucket bloquea todo acceso público, solo lo lee la distribución (OAC), el sitio va solo por HTTPS y la función de índices corre en cada request.
+- Con `network_egress = "endpoints"` hay un interface endpoint por servicio (Secrets Manager, SQS y SES), con DNS privado, en 1 AZ y accesible solo por 443 desde el SG `lambda`. Con `none` no hay ninguno.
+- La CloudFront Function de índices se prueba aparte con `node --test` (`scripts/aws/index-rewrite.test.mjs`).
 - El stage `$default` escribe access logs en su log group.
 - `infra/bootstrap`: el bucket del state bloquea el acceso público y el rol de deploy solo lo asume este repo, desde `main` o desde el environment `aws`.
 - `envs/aws`: emisor de Cognito y URL de la API de AWS, y valores por defecto de §7.3.
@@ -851,7 +857,7 @@ Se dispara en cada pull request y en cada push a `main`. Usa `concurrency` para 
   3. Aprobación manual.
   4. `terraform apply` del plan guardado.
   5. Migrator.
-  6. Deploy de la web (`aws s3 sync` e invalidación de CloudFront).
+  6. Deploy de la web: `scripts/aws/post-apply.mjs` corre el migrator y publica el sitio, igual que `aws:deploy`. No hace falta invalidar CloudFront (§7.4).
   7. Smoke tests (`scripts/aws/smoke.mjs`), que solo leen y no crean datos: el sitio y su `config.json`, `401` de la API sin token, el preflight CORS desde el origen del sitio y la JWKS de Cognito. Los E2E de la API no sirven en AWS, porque crean usuarios con la API de administración de Cognito y leen los emails de `/_aws/ses` de Floci.
 - Reutiliza los artifacts de `build` del commit, así no se recompila. Busca la ejecución de `ci.yml` en verde de ese commit en `main`, y falla si no existe.
 - **Dos jobs:**
@@ -951,43 +957,68 @@ Decisiones de base:
 
 ## 11. Despliegue en AWS y riesgos
 
-### 11.1 Pasos del primer despliegue (fase F7)
-1. **Cuenta y bootstrap:** aplicar `infra/bootstrap`, que crea el bucket del state y el rol OIDC limitado al repo y a la rama `main`.
-2. **Decidir la red** (D-3.1) y completar `envs/aws/terraform.tfvars`.
-3. **SES:**
-   - Verificar el dominio remitente (DKIM, SPF y DMARC).
-   - Pedir salir del *sandbox*. Mientras tanto, solo se puede enviar a direcciones verificadas.
-   - Configurar Cognito para que envíe sus emails a través de SES.
-4. **Primer deploy:** a mano (`plan` y `apply`), migrator y deploy de la web. Después, habilitar `AWS_DEPLOY_ENABLED`.
-5. **Validación:** smoke tests, y E2E manual de registro con código de verificación real (CU-01).
-6. **Mejoras opcionales para AWS:**
-   - RDS Proxy.
-   - SRP en lugar de `USER_PASSWORD_AUTH`.
-   - Alarmas de CloudWatch: mensajes en la DLQ, errores 5xx y logs `notification_publish_failed`.
-7. **Desmontar:** `terraform destroy` en `envs/aws` cuando ya no se use, para no generar costos.
+### 11.1 Ciclo de vida en AWS (fase F7)
+El entorno de AWS se usa por sesiones: se despliega, se prueba (incluidos cambios de lógica por el pipeline) y se borra entero, para que el costo sea de centavos (§11.2).
 
-### 11.2 Costo estimado en AWS (orientativo, uso bajo)
-| Recurso | USD/mes aprox. |
+**Prerequisitos (una vez):**
+- Cuenta de AWS, con MFA en el usuario root, y una alerta de AWS Budgets de 1 USD, que es gratis.
+- **AWS CLI v2** con una sesión iniciada (`aws login` o `aws sso login`). Los scripts toman de ahí credenciales temporales; para otro perfil, `AWS_PROFILE=<perfil>`.
+- `infra/envs/aws/terraform.tfvars` a partir del `.example`, con `ses_from` = tu email.
+
+**Comandos:**
+
+| Comando | Qué hace |
 |---|---|
-| RDS `db.t4g.micro` y 20 GB | 15 |
-| Salida de red (D-3.1): NAT Gateway / VPC endpoints | ~35 / ~25–30 |
-| Lambda, API Gateway, SQS, SES, S3 y CloudFront | ~0–2 (por uso) |
-| Cognito (pocos usuarios activos) | ~0 |
+| `pnpm aws:deploy` | 1. Aplica `infra/bootstrap` si falta y escribe `backend.hcl`. 2. Build de las Lambdas y del sitio. 3. `terraform plan` y confirmación escribiendo `aplicar`. 4. `apply`, migrator, publicación del sitio y smoke tests. Es idempotente: también sirve para re-desplegar a mano. La primera vez tarda ~15 min, por RDS y CloudFront |
+| `pnpm aws:admin <email>` | Suma un usuario ya registrado al grupo `admin`. En AWS no corre el seed (§10.2) |
+| `pnpm aws:destroy [--keep-bootstrap]` | Pide confirmar escribiendo `borrar` y desactiva la protección de RDS. Hace `destroy` de `envs/aws` y verifica que el state quede vacío y que no quede ningún recurso con los tags `project=reservas` y `env=aws` (Resource Groups Tagging API). **Recién entonces** borra el bootstrap y los archivos locales. Si algo falla, se corta sin tocar el bootstrap, y volver a correrlo retoma donde quedó |
 
-La red es el costo dominante. Por eso conviene desmontar el entorno cuando no se usa.
+**Sesión de prueba:**
+1. `pnpm aws:deploy`. AWS manda un mail para verificar el remitente de SES: un click.
+2. **Validación:** smoke tests. Registro desde el sitio con código de verificación real (CU-01), `pnpm aws:admin` y los recorridos de §8.2 a mano, incluidos los emails de reserva y cancelación.
+3. **Pipeline:**
+   - Repo público (§9.3).
+   - Environment `aws` con aprobación, limitado a `main`.
+   - Variables del repo (§9.2) con los outputs del bootstrap, y `AWS_DEPLOY_ENABLED=true`.
+   - Un cambio de lógica en una Lambda, por PR, merge y `deploy-aws.yml`: el `plan` muestra solo las funciones afectadas.
+4. `pnpm aws:destroy`, y borrar `AWS_DEPLOY_ENABLED`.
+
+**Emails en AWS:**
+- **Cognito:** los códigos de verificación los envía Cognito con su remitente por defecto (gratis, hasta 50 por día). No se configura Cognito con SES.
+- **Reservas:** los emails los envía SES desde el email verificado en `ses_from`. En el *sandbox* de SES solo se puede enviar a direcciones verificadas, así que las pruebas usan ese mismo email, u otros verificados en la consola.
+- **Dominio propio:** con uno (DKIM, SPF y DMARC) se puede pedir salir del sandbox. Queda fuera del alcance del POC.
+
+**Mejoras posibles para un entorno permanente:**
+- RDS Proxy.
+- SRP en lugar de `USER_PASSWORD_AUTH`.
+- Alarmas de CloudWatch: mensajes en la DLQ, errores 5xx y logs `notification_publish_failed`.
+- Endpoints en 2 AZ (`endpoint_az_count`).
+
+### 11.2 Costo estimado en AWS (orientativo, us-east-1)
+| Recurso | USD por hora | Sesión de 3 h | Si quedara prendido un mes |
+|---|---|---|---|
+| 3 interface endpoints en 1 AZ (D-3.1) | ~0,03 | ~0,09 | ~22 |
+| RDS `db.t4g.micro` y 20 GB (gratis con la capa gratuita clásica) | ~0,016 | ~0,05 | ~15 |
+| Lambda, API Gateway, SQS, SES, S3, CloudFront y Cognito | por uso | ~0 | ~0–2 |
+| Secrets Manager (30 días gratis por secreto nuevo) | — | ~0 | 0,40 |
+| Bootstrap: bucket del state y rol | — | ~0 | ~0 |
+
+**Una sesión cuesta menos de 0,30 USD.** El riesgo no es el costo de la sesión, sino olvidarse el entorno prendido: por eso la alerta de AWS Budgets y `pnpm aws:destroy` al terminar.
 
 ### 11.3 Riesgos
 | Riesgo | Impacto | Mitigación |
 |---|---|---|
-| Floci se comporta distinto que AWS: no aplica IAM ni la red | Errores que solo aparecen en AWS | Tests de infra sobre el plan (§8.2) y smoke test en AWS al migrar |
+| Floci se comporta distinto que AWS: no aplica IAM ni la red | Errores que solo aparecen en AWS | Tests de infra sobre el plan (§8.2), y smoke tests y recorridos manuales en cada sesión en AWS (§11.1) |
 | Puntos de integración de §7.6 (emisor de tokens, endpoints dentro de la Lambda, host de RDS) | Bloquea el entorno local | **Spike F0** antes de construir nada más |
 | Floci es un proyecto joven | Bugs o cambios que rompen | Imagen con versión fija (2.1.0), actualización deliberada que vuelve a correr el spike F0, y reporte de issues |
 | Cognito de Floci no soporta CORS (hallazgo A8) | El login desde el navegador falla si no pasa por el proxy local | Proxy del mismo origen en `localhost` (`pnpm dev` y `pnpm local:site`). No aplica a AWS real |
 | Las URLs `*.localhost.floci.io` dependen de un DNS público que resuelve a `127.0.0.1` (hallazgo A6) | Sin conexión a Internet, la API y el sitio no resuelven desde el host | Documentado en el README. Alternativa sin conexión: una entrada en el archivo `hosts` para el `apiId` |
 | Agotar las conexiones de Postgres con muchas Lambdas en paralelo | Errores 5xx con carga | `max: 1` por instancia y concurrencia reservada acotada. RDS Proxy en AWS |
 | Arranques en frío de Lambdas en VPC | Latencia en el primer request | Aceptado en el POC. Bundles chicos con esbuild |
-| SES sandbox y entregabilidad | Los emails no llegan en AWS | Pasos de §11.1.3 |
+| SES sandbox y entregabilidad | Los emails no llegan en AWS | Remitente y destinatarios verificados (§11.1, "Emails en AWS"). Con dominio propio, salir del sandbox |
 | Pérdida de emails si falla SQS (decisión v1) | El usuario no recibe la notificación | Log `notification_publish_failed`. Extensión E-01 |
+| Dejar el entorno de AWS prendido | Costo mensual (§11.2) | Alerta de AWS Budgets de 1 USD y `pnpm aws:destroy` al terminar cada sesión |
+| Borrar el state antes que los recursos | Recursos huérfanos que siguen cobrando y chocan con el próximo deploy | `aws:destroy` borra el bootstrap solo con el state vacío y sin recursos con los tags del proyecto |
 
 ---
 
@@ -1003,13 +1034,14 @@ Cada fase termina con algo que funciona y se puede demostrar, con sus tests en v
 | **F4 Notificaciones** ✔ | Módulo `notifications`, publicación después del commit, `notifier` idempotente, plantillas de email | Email de confirmación y de cancelación verificado en `/_aws/ses` por el E2E |
 | **F5 Frontend** ✔ | Páginas de §5.4, auth en memoria, `config.json`, módulo `frontend`, `deploy:web:local`, E2E UI | Recorridos de §8.2 (E2E UI) en verde en CI |
 | **F6 Endurecimiento** ✔ | `terraform test`, umbrales de cobertura, `envs/aws` e `infra/bootstrap` completos (sin aplicar), `deploy-aws.yml` deshabilitado, README con guía de inicio | Un desarrollador nuevo levanta todo con `npm run doctor`, `pnpm install` y `pnpm local:up` siguiendo solo el README |
-| **F7 Despliegue en AWS** (el objetivo del proyecto) | Pasos de §11.1 | Smoke tests en verde en AWS, y `deploy-aws.yml` habilitado y probado |
+| **F7 Despliegue en AWS** (el objetivo del proyecto) | D-3.1 (VPC endpoints), CloudFront, `aws:deploy`, `aws:admin` y `aws:destroy`, y la sesión de prueba de §11.1 | Smoke tests y recorridos manuales en verde en AWS, un cambio de Lambda desplegado por `deploy-aws.yml`, y todo borrado, incluido el bootstrap |
 
 ### 12.1 Decisiones de la Parte 3
-- ~~D-3.1 Salida de red de las Lambdas en AWS real~~ → **Diferida a F7.**
-  - Queda como variable `network_egress = "nat" | "endpoints"` en `envs/aws`, con el valor `none` en local.
-  - El módulo `network` ya tiene la variable, pero por ahora solo admite `none`. Las dos opciones se implementan en F7, cuando se decida.
-  - No afecta el código, el entorno local ni la CI.
+- ~~D-3.1 Salida de red de las Lambdas en AWS~~ → **Resuelta en F7: interface endpoints (PrivateLink) en 1 AZ.**
+  - Hacen falta 3: Secrets Manager (el secreto de la DB), SQS (`bookings` publica) y SES (`notifier` envía). El `notifier` no puede salir de la VPC porque escribe en `notification_log`.
+  - **Por qué:** todo queda privado y administrado por AWS, sin salida a Internet. Con el uso por sesiones (§11.1), la diferencia de costo con NAT Gateway (~0,05 USD por hora) o una instancia NAT (~0,005 USD por hora) es de centavos. La instancia NAT sumaba una EC2 para mantener.
+  - **1 AZ:** si esa AZ cae, las Lambdas no llegan a los servicios. Es aceptable en un POC, y se pasa a 2 AZ con `endpoint_az_count`.
+  - `network_egress` admite `none` (local) y `endpoints` (AWS). NAT no se implementa.
 - ~~D-3.2 Cuándo corre `e2e-local` en CI~~ → **Resuelta: en cada PR y en cada push a `main`**, con filtros por ruta para los cambios que solo tocan documentación (§9.1). Si el tiempo o los minutos molestan, se puede pasar a correr la UI solo en `main`.
 - ~~D-3.3 Visibilidad del repositorio de GitHub~~ → **Resuelta: privado hasta que esté pulido, después público** (§9.3). Desde el día 1 no se versionan secretos y se escanean con `gitleaks`.
 

@@ -1,7 +1,6 @@
 # Bootstrap de AWS (SPEC §7.7, §11.1.1): se aplica una sola vez y a mano, con credenciales de administrador.
 # Crea el bucket del state de envs/aws y el rol que asume GitHub Actions por OIDC, sin claves de larga duración.
 # Usa state local (en .gitignore): si se pierde, se importan los recursos o se recrean.
-# Preparado en F6 y **sin aplicar**.
 
 terraform {
   required_version = ">= 1.10"
@@ -49,11 +48,11 @@ locals {
 
 # --- Bucket del state de envs/aws ---
 
+# Sin prevent_destroy: el POC se despliega, se prueba y se borra entero (SPEC §11.1). Que no se borre el state
+# mientras queden recursos lo garantiza `pnpm aws:destroy`, que destruye envs/aws y verifica antes de llegar acá.
 resource "aws_s3_bucket" "state" {
-  bucket = "reservas-tfstate-${local.account_id}"
-  lifecycle {
-    prevent_destroy = true
-  }
+  bucket        = "reservas-tfstate-${local.account_id}"
+  force_destroy = true # el state tiene versionado: sin esto, el destroy no puede vaciar el bucket
 }
 
 resource "aws_s3_bucket_versioning" "state" {

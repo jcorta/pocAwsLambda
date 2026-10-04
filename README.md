@@ -122,17 +122,24 @@ docs/              Especificación, tareas y resultados del spike de Floci
 
 ## Despliegue en AWS
 
-Es el objetivo del proyecto y la fase siguiente (F7). Ya están listos:
-- **`infra/bootstrap`:** el bucket del state y el rol que GitHub Actions asume por OIDC, sin claves guardadas.
-- **`infra/envs/aws`:** el entorno completo, con los mismos módulos que el local.
-- **`.github/workflows/deploy-aws.yml`:** plan, aprobación manual, apply, migraciones, publicación del sitio y smoke tests.
+Es el objetivo del proyecto (fase F7). El entorno de AWS se usa por sesiones: se despliega, se prueba y se borra entero. **Una sesión de 3 h cuesta menos de 0,30 USD.**
 
-Todo está validado con `terraform test`, pero todavía no se aplicó. Antes del primer despliegue falta:
-- Decidir la salida de red de las Lambdas: NAT Gateway, instancia NAT o VPC endpoints.
-- Sumar CloudFront.
-- Verificar el dominio de SES.
+En AWS, las Lambdas corren en subnets privadas sin salida a Internet: llegan a Secrets Manager, SQS y SES por VPC endpoints. El sitio se sirve por CloudFront con HTTPS, desde un bucket privado.
 
-Los pasos y el costo estimado están en [SPEC §11](docs/SPEC.md#11-despliegue-en-aws-y-riesgos).
+**Prerequisitos:**
+- Una cuenta de AWS, con una alerta de AWS Budgets de 1 USD.
+- La [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) con una sesión iniciada (`aws login` o `aws sso login`).
+- `infra/envs/aws/terraform.tfvars`, copiado del `.example`, con tu email en `ses_from`.
+
+```sh
+pnpm aws:deploy             # Bootstrap, build, plan (pide confirmación), apply, migraciones, sitio y smoke tests (~15 min)
+pnpm aws:admin <tu-email>   # Te hace admin, después de registrarte en el sitio
+pnpm aws:destroy            # Borra todo, incluido el bucket del state. Hasta entonces se cobra por hora
+```
+
+- **Cambios después del primer deploy:** van por PR. Una vez mergeados, se despliegan con el workflow `deploy-aws.yml` (a mano, con aprobación).
+- **Emails:** SES queda en *sandbox*, así que solo envía a direcciones verificadas. Registrate con el mismo email de `ses_from`.
+- **Más detalle:** los pasos completos, los costos y los riesgos están en [SPEC §11](docs/SPEC.md#11-despliegue-en-aws-y-riesgos).
 
 ## Licencia
 

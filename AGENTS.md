@@ -71,6 +71,9 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm lint:infra` | `terraform fmt -check`, `validate` de los roots (`envs/local`, `envs/aws` y `bootstrap`) y `tflint`, en contenedores. **Requiere Docker** |
 | `pnpm test:infra` | `terraform test` en cada módulo y root con carpeta `tests/`, con providers simulados (no necesita Floci). **Requiere Docker** |
 | `pnpm --filter @reservas/api db:generate` | Genera una migración SQL a partir de los cambios en `src/infra/db/schema.ts`. Lo que Drizzle no expresa (exclusion constraints, extensiones, datos) va en una migración manual (`drizzle-kit generate --custom`) |
+| `pnpm aws:deploy` | **AWS:** bootstrap si falta, build, `plan`, confirmación (`aplicar`), `apply`, migrator, sitio y smoke tests. Requiere la AWS CLI v2 con sesión iniciada y `infra/envs/aws/terraform.tfvars` (SPEC §11.1). **Genera costos: no correrlo sin aprobación** |
+| `pnpm aws:admin <email>` | **AWS:** suma un usuario registrado al grupo `admin` |
+| `pnpm aws:destroy [--keep-bootstrap]` | **AWS:** borra todo en orden (confirmación `borrar`). Solo toca el bootstrap con el state vacío y sin recursos con los tags del proyecto |
 | `pnpm secrets:staged` / `pnpm secrets:history` | gitleaks (en Docker) sobre lo que está por commitearse, o sobre todo el historial |
 
 - El resto de los comandos (`npm run doctor`, `pnpm local:up`, etc.) están definidos en SPEC §10.1 y se agregan a esta tabla a medida que existan.
@@ -116,7 +119,8 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
   - Los módulos (`infra/modules/*`) no saben en qué entorno corren; las diferencias van en `infra/envs/*`.
   - Las rutas de la API se declaran en `infra/modules/api/routes.tf.json`. Una ruta nueva va **ahí y** en `handlers/routes/<lambda>.ts`; el test `routes.test.ts` falla si no coinciden.
   - El lockfile de providers (`.terraform.lock.hcl`) se versiona en cada root, con las mismas versiones en todos.
-  - `envs/aws` e `infra/bootstrap` **no se aplican** hasta F7. Se validan solo con `pnpm lint:infra` y `pnpm test:infra`, con providers simulados.
+  - `envs/aws` e `infra/bootstrap` se aplican solo con `pnpm aws:deploy` y se borran solo con `pnpm aws:destroy`, nunca con `terraform apply` o `destroy` sueltos, y **siempre con aprobación del usuario**, porque generan costos. En la CI se validan con `pnpm lint:infra` y `pnpm test:infra`, con providers simulados.
+  - Las diferencias entre entornos son variables de los roots: `network_egress` (`none` en local, `endpoints` en AWS) y `enable_cloudfront` (`false` en local, `true` en AWS).
 - **Floci deja volúmenes propios** (los de RDS, con la etiqueta `floci=true`) que `docker compose down -v` no borra. `pnpm local:down` y `local:reset` los limpian; no bajar el entorno con `docker compose down` a mano.
 - **Floci y Cognito:** si el usuario ya existe en un pool que usa el email como nombre de usuario, `AdminCreateUser` responde `AliasExistsException`, no `UsernameExistsException`.
 - **En Floci, ni Cognito ni las respuestas de la HTTP API traen CORS (hallazgos A8 y A9):**

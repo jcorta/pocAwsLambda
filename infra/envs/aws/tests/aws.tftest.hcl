@@ -32,8 +32,20 @@ mock_provider "aws" {
   mock_resource "aws_cognito_user_pool" {
     defaults = { id = "us-east-1_test" }
   }
-  mock_resource "aws_s3_bucket_website_configuration" {
-    defaults = { website_endpoint = "reservas-aws-site.s3-website-us-east-1.amazonaws.com" }
+  mock_resource "aws_cloudfront_distribution" {
+    defaults = {
+      arn         = "arn:aws:cloudfront::000000000000:distribution/EXAMPLE"
+      domain_name = "d111111abcdef8.cloudfront.net"
+    }
+  }
+  mock_resource "aws_cloudfront_function" {
+    defaults = { arn = "arn:aws:cloudfront::000000000000:function/reservas-aws-index" }
+  }
+  mock_data "aws_cloudfront_cache_policy" {
+    defaults = { id = "cache-policy" }
+  }
+  mock_data "aws_region" {
+    defaults = { region = "us-east-1" }
   }
 }
 
@@ -63,14 +75,14 @@ run "valores_de_aws" {
   }
 
   assert {
-    condition     = output.frontend_url == "http://reservas-aws-site.s3-website-us-east-1.amazonaws.com"
-    error_message = "Sin CloudFront, el sitio es el website del bucket."
+    condition     = output.frontend_url == "https://d111111abcdef8.cloudfront.net"
+    error_message = "El sitio se sirve por CloudFront, con HTTPS."
   }
 
   assert {
     condition = (
       var.db_deletion_protection && var.db_backup_retention_days == 7 && var.lambda_architecture == "arm64"
-      && var.db_instance_class == "db.t4g.micro"
+      && var.db_instance_class == "db.t4g.micro" && var.network_egress == "endpoints" && var.enable_cloudfront
     )
     error_message = "Los valores por defecto son los de AWS en SPEC §7.3."
   }

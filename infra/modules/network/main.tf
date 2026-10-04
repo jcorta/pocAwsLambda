@@ -22,17 +22,39 @@ variable "availability_zones" {
   default = ["us-east-1a", "us-east-1b"]
 }
 
-# Salida de las Lambdas hacia los servicios de AWS (decisión D-3.1, diferida a F7).
-# En Floci no hace falta: Docker conecta todo. "nat" y "endpoints" se implementan en F7.
-# tflint-ignore: terraform_unused_declarations # hasta F7 solo existe por su validación
+# Salida de las Lambdas hacia los servicios de AWS (decisión D-3.1, SPEC §12.1):
+#   "none":      sin salida. En Floci no hace falta, porque Docker conecta todo.
+#   "endpoints": interface endpoints (PrivateLink) de los servicios que usan las Lambdas. Sin salida a Internet.
 variable "network_egress" {
   type    = string
   default = "none"
   validation {
-    condition     = var.network_egress == "none"
-    error_message = "Por ahora solo se admite \"none\": NAT y VPC endpoints se implementan en F7 (D-3.1)."
+    condition     = contains(["none", "endpoints"], var.network_egress)
+    error_message = "network_egress admite \"none\" (local) o \"endpoints\" (AWS)."
   }
 }
+
+variable "endpoint_services" {
+  description = "Servicios a los que llaman las Lambdas: el secreto de la DB, la cola de notificaciones y el envío de emails."
+  type        = list(string)
+  default     = ["secretsmanager", "sqs", "email"]
+}
+
+variable "endpoint_az_count" {
+  description = "En cuántas AZ se crean los endpoints. Cada endpoint cobra por hora y por AZ: 1 alcanza para el POC (D-3.1)."
+  type        = number
+  default     = 1
+  validation {
+    condition     = var.endpoint_az_count >= 1 && var.endpoint_az_count <= length(var.availability_zones)
+    error_message = "endpoint_az_count va de 1 a la cantidad de AZ."
+  }
+}
+
+locals {
+  endpoints = var.network_egress == "endpoints" ? toset(var.endpoint_services) : toset([])
+}
+
+data "aws_region" "current" {}
 
 resource "aws_vpc" "main" {
   cidr_block           = var.cidr_block
@@ -73,6 +95,35 @@ resource "aws_security_group" "db" {
     protocol        = "tcp"
     security_groups = [aws_security_group.lambda.id]
   }
+}
+
+# --- Interface endpoints (network_egress = "endpoints") ---
+# Con DNS privado, los SDK de las Lambdas usan los nombres de siempre (secretsmanager.<region>.amazonaws.com, etc.)
+# y resuelven a las IP privadas de los endpoints: el código no cambia.
+
+resource "aws_security_group" "endpoints" {
+  count       = length(local.endpoints) > 0 ? 1 : 0
+  name        = "${var.name}-endpoints"
+  description = "Interface endpoints: solo HTTPS desde las Lambdas"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+  }
+}
+
+resource "aws_vpc_endpoint" "interface" {
+  for_each            = local.endpoints
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${data.aws_region.current.region}.${each.key}"
+  vpc_endpoint_type   = "Interface"
+  private_dns_enabled = true
+  subnet_ids          = slice(aws_subnet.private[*].id, 0, var.endpoint_az_count)
+  security_group_ids  = [aws_security_group.endpoints[0].id]
+  tags                = { Name = "${var.name}-${each.key}" }
 }
 
 output "vpc_id" {
