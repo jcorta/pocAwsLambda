@@ -83,6 +83,7 @@ run "valores_de_aws" {
     condition = (
       var.db_deletion_protection && var.db_backup_retention_days == 7 && var.lambda_architecture == "arm64"
       && var.db_instance_class == "db.t4g.micro" && var.network_egress == "endpoints" && var.enable_cloudfront
+      && var.db_storage_type == "gp3" && join(",", var.availability_zones) == "us-east-1a,us-east-1b"
     )
     error_message = "Los valores por defecto son los de AWS en SPEC §7.3."
   }

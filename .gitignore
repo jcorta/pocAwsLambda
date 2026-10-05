@@ -35,6 +35,8 @@ infra/envs/aws/terraform.tfvars
 infra/envs/aws/backend.hcl
 # Los módulos se inicializan solo para 	erraform test: el lock file vale en los roots
 infra/modules/*/.terraform.lock.hcl
+# Datos de `pnpm lint:infra` y `pnpm test:infra` (scripts/infra.mjs), separados del .terraform de cada root
+.terraform-check/
 override.tf
 override.tf.json
 *_override.tf
