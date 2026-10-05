@@ -9,7 +9,7 @@ import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { buildLambdas } from "../local/deploy-steps.mjs";
 import { fail, info, removeTerraformFiles, ROOT, step } from "../local/lib.mjs";
-import { BOOTSTRAP_DIR, confirm, ENV_DIR, loadCredentials, terraform } from "./lib.mjs";
+import { BOOTSTRAP_DIR, confirm, ENV_DIR, inState, loadCredentials, terraform } from "./lib.mjs";
 
 const keepBootstrap = process.argv.includes("--keep-bootstrap");
 
@@ -33,21 +33,28 @@ if (!existsSync(join(ROOT, BOOTSTRAP_DIR, "terraform.tfstate")) || !existsSync(j
 // El destroy evalúa el código de las Lambdas (archive_file): tiene que existir el build
 buildLambdas();
 
-step("Terraform: preparar el borrado de RDS");
 terraform(ENV_DIR, ["init", "-input=false", "-no-color", "-backend-config=backend.hcl", "-reconfigure"], {
   capture: true,
 });
-// Con protección contra borrado (SPEC §7.3) RDS no se puede destruir: primero se desactiva, y eso además
-// omite el snapshot final, que quedaría cobrando
-terraform(ENV_DIR, [
-  "apply",
-  "-auto-approve",
-  "-input=false",
-  "-no-color",
-  "-compact-warnings",
-  "-target=module.database.aws_db_instance.main",
-  "-var=db_deletion_protection=false",
-]);
+
+// Un despliegue que falló a medias puede no tener RDS: con `-target`, Terraform la crearía en lugar de modificarla
+const RDS = "module.database.aws_db_instance.main";
+if (inState(terraform(ENV_DIR, ["state", "list"], { capture: true }).stdout, RDS)) {
+  step("Terraform: preparar el borrado de RDS");
+  // Con protección contra borrado (SPEC §7.3) RDS no se puede destruir: primero se desactiva, y eso además
+  // omite el snapshot final, que quedaría cobrando
+  terraform(ENV_DIR, [
+    "apply",
+    "-auto-approve",
+    "-input=false",
+    "-no-color",
+    "-compact-warnings",
+    `-target=${RDS}`,
+    "-var=db_deletion_protection=false",
+  ]);
+} else {
+  info("RDS no está en el state (despliegue incompleto): no hay protección que desactivar");
+}
 
 step("Terraform destroy en infra/envs/aws (CloudFront y la red pueden tardar ~15 min)");
 terraform(ENV_DIR, [

@@ -87,6 +87,11 @@ export function outputs(dir) {
   return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v.value]));
 }
 
+/** ¿Está `address` en la salida de `terraform state list`? Coincide con la dirección exacta, no con prefijos. */
+export function inState(stateList, address) {
+  return stateList.split(/\r?\n/).some((line) => line.trim() === address);
+}
+
 /** Pide confirmación escribiendo una palabra exacta. Sin terminal interactiva, no confirma. */
 export async function confirm(question, word) {
   if (!process.stdin.isTTY) return false;
