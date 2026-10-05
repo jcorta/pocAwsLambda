@@ -4,6 +4,7 @@
 //   2. Verifica que el state quedó vacío y que no queda ningún recurso con los tags del proyecto.
 //   3. Recién entonces, destroy del bootstrap: el bucket del state y el rol OIDC.
 // Si algo falla, se corta sin tocar el bootstrap: con el state intacto, volver a correrlo retoma donde quedó.
+// Opciones: --keep-bootstrap (no borra el bootstrap) y --ignore-tag-index (no se corta por el índice de tags).
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from "@aws-sdk/client-resource-groups-tagging-api";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -12,6 +13,8 @@ import { fail, info, removeTerraformFiles, ROOT, step } from "../local/lib.mjs";
 import { BOOTSTRAP_DIR, confirm, ENV_DIR, inState, loadCredentials, terraform } from "./lib.mjs";
 
 const keepBootstrap = process.argv.includes("--keep-bootstrap");
+// Para cuando el índice de tags de AWS sigue listando recursos que ya no existen (se verificó en la consola o con la CLI)
+const ignoreTagIndex = process.argv.includes("--ignore-tag-index");
 
 step("Credenciales de AWS");
 const { account } = loadCredentials();
@@ -95,11 +98,16 @@ for (let attempt = 0; attempt < 12; attempt++) {
   await new Promise((r) => setTimeout(r, 15_000));
 }
 if (leftovers.length && !keepBootstrap) {
-  fail(
-    `Siguen apareciendo recursos del proyecto; no se toca el bootstrap. Si ya los borraste, el índice de tags de ` +
-      `AWS puede tardar en reflejarlo: volver a correr en unos minutos.\n    ` +
-      leftovers.join("\n    "),
-  );
+  const list = leftovers.join("\n    ");
+  if (!ignoreTagIndex) {
+    fail(
+      `Siguen apareciendo recursos del proyecto; no se toca el bootstrap. El state está vacío, así que lo más ` +
+        `probable es que el índice de tags de AWS (eventualmente consistente) todavía no lo refleje: volver a ` +
+        `correr en unos minutos. Si pasa mucho tiempo, comprobar que no existan (consola o CLI) y correr con ` +
+        `--ignore-tag-index.\n    ${list}`,
+    );
+  }
+  console.warn(`\n⚠ --ignore-tag-index: se sigue aunque el índice de tags liste estos recursos:\n    ${list}`);
 }
 
 if (keepBootstrap) {
