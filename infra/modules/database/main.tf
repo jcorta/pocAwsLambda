@@ -36,6 +36,12 @@ variable "backup_retention_days" {
   default = 0
 }
 
+variable "storage_type" {
+  description = "Tipo de almacenamiento (gp2, gp3...). null usa el del provider; en AWS se usa gp3, que a veces tiene capacidad cuando gp2 no."
+  type        = string
+  default     = null
+}
+
 resource "aws_db_subnet_group" "main" {
   name       = "${var.name}-db"
   subnet_ids = var.subnet_ids
@@ -52,6 +58,7 @@ resource "aws_db_instance" "main" {
   engine_version          = "16"
   instance_class          = var.instance_class
   allocated_storage       = 20
+  storage_type            = var.storage_type
   storage_encrypted       = true
   db_name                 = "reservas"
   username                = "app"

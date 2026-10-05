@@ -33,3 +33,16 @@ run "rds_privada" {
     error_message = "RDS vive en las subnets privadas que recibe."
   }
 }
+
+run "storage_type" {
+  command = apply
+
+  variables {
+    storage_type = "gp3"
+  }
+
+  assert {
+    condition     = aws_db_instance.main.storage_type == "gp3"
+    error_message = "El tipo de almacenamiento es configurable: en AWS se usa gp3 (InsufficientDBInstanceCapacity con gp2)."
+  }
+}

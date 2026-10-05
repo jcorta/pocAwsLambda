@@ -7,3 +7,9 @@ region = "us-east-1"
 # En el sandbox de SES solo se envía a direcciones verificadas, así que verificá también los
 # emails con los que te registres en el sitio (o usá el mismo).
 ses_from = "tu-email@example.com"
+
+# Si RDS falla con InsufficientDBInstanceCapacity, probar otras AZ (las subnets se recrean):
+# availability_zones = ["us-east-1c", "us-east-1d"]
+
+# Si RDS falla con FreeTierRestrictionError (cuenta en la capa gratuita), bajar la retención de backups:
+# db_backup_retention_days = 1

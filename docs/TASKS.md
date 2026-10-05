@@ -122,7 +122,9 @@ Revisada el 2026-10-03. Lo que queda abierto lo hace el dueño del repo en GitHu
 - [x] `deploy-aws.yml` usa los mismos pasos posteriores al apply (`scripts/aws/post-apply.mjs`)
 
 **Sesión en AWS (§11.1):**
-- [ ] Prerequisitos: AWS CLI v2 con sesión iniciada, alerta de Budgets de 1 USD y `terraform.tfvars`
+- [x] Prerequisitos: AWS CLI v2 con sesión iniciada (SSO), alerta de Budgets y `terraform.tfvars`
+- [ ] Caso de AWS Support (*Account and billing*) para verificar la cuenta: CloudFront falló con `Your account must be verified` en el primer intento (2026-10-05)
+- [ ] Reintentar RDS: `InsufficientDBInstanceCapacity` con `gp2` en el primer intento. Ahora `gp3` y AZ configurables
 - [ ] `pnpm aws:deploy`, verificación del remitente de SES y smoke tests
 - [ ] Registro real con código de verificación, `aws:admin` y los recorridos de §8.2 a mano, con emails
 - [ ] Repo público, environment `aws`, variables del repo y `AWS_DEPLOY_ENABLED=true`

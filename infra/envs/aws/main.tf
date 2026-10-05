@@ -38,6 +38,18 @@ variable "db_instance_class" {
   default = "db.t4g.micro"
 }
 
+variable "db_storage_type" {
+  description = "gp3: RDS a veces no tiene capacidad de db.t4g.micro con gp2 (InsufficientDBInstanceCapacity)."
+  type        = string
+  default     = "gp3"
+}
+
+variable "availability_zones" {
+  description = "AZ de las 2 subnets privadas. Si RDS no tiene capacidad en estas, probar otras (por ejemplo us-east-1c y us-east-1d)."
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b"]
+}
+
 variable "db_deletion_protection" {
   type    = bool
   default = true
@@ -80,9 +92,10 @@ locals {
 }
 
 module "network" {
-  source         = "../../modules/network"
-  name           = local.name
-  network_egress = var.network_egress
+  source             = "../../modules/network"
+  name               = local.name
+  network_egress     = var.network_egress
+  availability_zones = var.availability_zones
 }
 
 module "database" {
@@ -91,6 +104,7 @@ module "database" {
   subnet_ids            = module.network.private_subnet_ids
   security_group_id     = module.network.db_security_group_id
   instance_class        = var.db_instance_class
+  storage_type          = var.db_storage_type
   deletion_protection   = var.db_deletion_protection
   backup_retention_days = var.db_backup_retention_days
 }

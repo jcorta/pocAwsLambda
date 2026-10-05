@@ -669,6 +669,8 @@ provider "aws" {
 | `enable_cloudfront` | `false` | `true` |
 | `db_instance_class` | `db.t4g.micro` (Floci lo ignora) | `db.t4g.micro` |
 | `db_deletion_protection`, `db_backup_retention_days` | `false`, `0` | `true`, `7` |
+| `db_storage_type` | el del provider | `gp3`: RDS a veces no tiene capacidad de `db.t4g.micro` con `gp2` (`InsufficientDBInstanceCapacity`, primer despliegue en AWS) |
+| `availability_zones` | `us-east-1a` y `us-east-1b` | las mismas, configurables: si una zona no tiene capacidad, se prueban otras |
 | `lambda_architecture` | `x86_64` | `arm64` (más barato) |
 | `cognito_issuer_url` | `http://localhost:4566/<poolId>` (verificado en F0) | `https://cognito-idp.<region>.amazonaws.com/<poolId>` |
 | `api_url` (lo calcula el root) | `http://<apiId>.execute-api.localhost.floci.io:4566`. En Floci, `api_endpoint` devuelve una URL con formato de AWS que no sirve (hallazgo A5) | `aws_apigatewayv2_api.api_endpoint` |
@@ -971,7 +973,7 @@ El entorno de AWS se usa por sesiones: se despliega, se prueba (incluidos cambio
 |---|---|
 | `pnpm aws:deploy` | 1. Aplica `infra/bootstrap` si falta y escribe `backend.hcl`. 2. Build de las Lambdas y del sitio. 3. `terraform plan` y confirmación escribiendo `aplicar`. 4. `apply`, migrator, publicación del sitio y smoke tests. Es idempotente: también sirve para re-desplegar a mano. La primera vez tarda ~15 min, por RDS y CloudFront |
 | `pnpm aws:admin <email>` | Suma un usuario ya registrado al grupo `admin`. En AWS no corre el seed (§10.2) |
-| `pnpm aws:destroy [--keep-bootstrap]` | Pide confirmar escribiendo `borrar` y desactiva la protección de RDS. Hace `destroy` de `envs/aws` y verifica que el state quede vacío y que no quede ningún recurso con los tags `project=reservas` y `env=aws` (Resource Groups Tagging API). **Recién entonces** borra el bootstrap y los archivos locales. Si algo falla, se corta sin tocar el bootstrap, y volver a correrlo retoma donde quedó |
+| `pnpm aws:destroy [--keep-bootstrap]` | Pide confirmar escribiendo `borrar` y desactiva la protección de RDS. Hace `destroy` de `envs/aws` y verifica que el state quede vacío y que no quede ningún recurso con los tags `project=reservas` y `env=aws` (Resource Groups Tagging API). **Recién entonces** borra el bootstrap y los archivos locales. Si algo falla, se corta sin tocar el bootstrap, y volver a correrlo retoma donde quedó. Soporta un despliegue incompleto (si RDS no está en el state, no intenta desactivar su protección). La API de tags es eventualmente consistente: con `--keep-bootstrap`, lo que siga listando solo se informa como advertencia, y sin él se corta pidiendo reintentar en unos minutos |
 
 **Sesión de prueba:**
 1. `pnpm aws:deploy`. AWS manda un mail para verificar el remitente de SES: un click.
@@ -1017,6 +1019,8 @@ El entorno de AWS se usa por sesiones: se despliega, se prueba (incluidos cambio
 | Arranques en frío de Lambdas en VPC | Latencia en el primer request | Aceptado en el POC. Bundles chicos con esbuild |
 | SES sandbox y entregabilidad | Los emails no llegan en AWS | Remitente y destinatarios verificados (§11.1, "Emails en AWS"). Con dominio propio, salir del sandbox |
 | Pérdida de emails si falla SQS (decisión v1) | El usuario no recibe la notificación | Log `notification_publish_failed`. Extensión E-01 |
+| Cuenta nueva de AWS: CloudFront exige verificarla (`AccessDenied: Your account must be verified…`) | No se puede crear la distribución, y sin ella el sitio no tiene HTTPS ni login (hallazgo A8) | Abrir un caso gratuito en *Account and billing* de AWS Support antes de la sesión (suele tardar de 24 a 48 h). Hasta entonces, no desplegar |
+| RDS sin capacidad de `db.t4g.micro` en las AZ elegidas (`InsufficientDBInstanceCapacity`) | El `apply` falla en RDS, con los endpoints ya cobrando | `gp3`, otras AZ (`availability_zones`) o reintentar más tarde. `aws:destroy` soporta un despliegue incompleto |
 | Dejar el entorno de AWS prendido | Costo mensual (§11.2) | Alerta de AWS Budgets de 1 USD y `pnpm aws:destroy` al terminar cada sesión |
 | Borrar el state antes que los recursos | Recursos huérfanos que siguen cobrando y chocan con el próximo deploy | `aws:destroy` borra el bootstrap solo con el state vacío y sin recursos con los tags del proyecto |
 

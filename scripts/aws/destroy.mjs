@@ -94,18 +94,30 @@ for (let attempt = 0; attempt < 12; attempt++) {
   info(`Quedan ${leftovers.length} recursos con tags del proyecto; reintento en 15 s`);
   await new Promise((r) => setTimeout(r, 15_000));
 }
-if (leftovers.length) {
+if (leftovers.length && !keepBootstrap) {
   fail(
-    `Siguen apareciendo recursos del proyecto; no se toca el bootstrap. Revisarlos y volver a correr:\n    ` +
+    `Siguen apareciendo recursos del proyecto; no se toca el bootstrap. Si ya los borraste, el índice de tags de ` +
+      `AWS puede tardar en reflejarlo: volver a correr en unos minutos.\n    ` +
       leftovers.join("\n    "),
   );
 }
-info("Ningún recurso con los tags project=reservas y env=aws");
 
 if (keepBootstrap) {
+  // El bootstrap no se borra, así que no hay nada que proteger: el índice de tags de AWS (eventualmente
+  // consistente) solo se informa. El state vacío ya prueba que Terraform borró todo lo que creó.
+  if (leftovers.length) {
+    console.warn(
+      `\n⚠ El índice de tags de AWS todavía lista ${leftovers.length} recursos. Suele ser demora del índice: ` +
+        `se puede verificar cada uno en la consola o volver a consultar en unos minutos:\n    ` +
+        leftovers.join("\n    "),
+    );
+  } else {
+    info("Ningún recurso con los tags project=reservas y env=aws");
+  }
   console.log("\n✔ Entorno borrado. El bootstrap queda (bucket del state y rol OIDC, ~0 USD).");
   process.exit(0);
 }
+info("Ningún recurso con los tags project=reservas y env=aws");
 
 step("Terraform destroy del bootstrap (bucket del state y rol OIDC)");
 terraform(BOOTSTRAP_DIR, ["init", "-input=false", "-no-color"], { capture: true });

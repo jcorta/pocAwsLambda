@@ -68,7 +68,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm --filter @reservas/api check:bundles` | Carga cada bundle y verifica que las Lambdas de la API respondan 401 sin ID token (detecta problemas de ESM o CommonJS) |
 | `pnpm test:e2e` | E2E de la API contra Floci. **Requiere `pnpm local:up`** (lee `apps/web/public/config.json`) |
 | `pnpm test:integration` | Tests de integración contra Postgres 16 real (Testcontainers), con cobertura de lo que depende de la base (umbral 80 %). **Requiere Docker** |
-| `pnpm lint:infra` | `terraform fmt -check`, `validate` de los roots (`envs/local`, `envs/aws` y `bootstrap`) y `tflint`, en contenedores. **Requiere Docker** |
+| `pnpm lint:infra` | `terraform fmt -check`, `validate` de los roots (`envs/local`, `envs/aws` y `bootstrap`) y `tflint`, en contenedores. Usan su propio directorio de datos (`.terraform-check/`), así que no dependen del backend que `local:up` o `aws:deploy` dejaron inicializado. **Requiere Docker** |
 | `pnpm test:infra` | `terraform test` en cada módulo y root con carpeta `tests/`, con providers simulados (no necesita Floci). **Requiere Docker** |
 | `pnpm --filter @reservas/api db:generate` | Genera una migración SQL a partir de los cambios en `src/infra/db/schema.ts`. Lo que Drizzle no expresa (exclusion constraints, extensiones, datos) va en una migración manual (`drizzle-kit generate --custom`) |
 | `pnpm aws:deploy` | **AWS:** bootstrap si falta, build, `plan`, confirmación (`aplicar`), `apply`, migrator, sitio y smoke tests. Requiere la AWS CLI v2 con sesión iniciada y `infra/envs/aws/terraform.tfvars` (SPEC §11.1). **Genera costos: no correrlo sin aprobación** |
