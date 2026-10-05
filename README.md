@@ -1,18 +1,44 @@
-# Reservas: POC serverless en AWS
+# Reservas: sistema de reservas serverless en AWS
 
-Sistema de **reservas de recursos por turnos** (salas, equipos, canchas…) que garantiza que nunca haya dos reservas sobre el mismo turno. Es una prueba de concepto de una arquitectura serverless en **AWS**, de punta a punta, con infraestructura como código, tests en todos los niveles y CI/CD.
+[![CI](https://github.com/jcorta/pocAwsLambda/actions/workflows/ci.yml/badge.svg)](https://github.com/jcorta/pocAwsLambda/actions/workflows/ci.yml)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+
+> **In short (EN):** a resource-booking system on serverless AWS (API Gateway, Lambda, RDS PostgreSQL, Cognito, SQS, SES, S3 and CloudFront), written in TypeScript with Terraform. Double bookings are impossible by design: a PostgreSQL exclusion constraint enforces it, and a concurrency test proves it. The whole stack runs locally on an AWS emulator with the same Terraform modules intended for AWS, and the CI runs API and UI end-to-end tests on every pull request. The AWS deployment tooling (`aws:deploy` / `aws:destroy`, OIDC pipeline) is in place and covered by `terraform test`. The documentation is in Spanish.
+
+Sistema de **reservas de recursos por turnos** (salas, equipos, canchas…) que garantiza que nunca haya dos reservas sobre el mismo turno. Es una prueba de concepto de punta a punta de una arquitectura serverless en **AWS**, con infraestructura como código, tests en todos los niveles y CI/CD.
 
 | Entorno | Para qué | Infra |
 |---|---|---|
-| **AWS** | El destino del proyecto | `infra/envs/aws`, deploy con `deploy-aws.yml` |
+| **AWS** | El destino del proyecto | `infra/envs/aws`, deploy con `aws:deploy` o con `deploy-aws.yml` |
 | **Local** | Desarrollar y probar sin costo, en tu máquina y en la CI, sobre [Floci](https://github.com/floci-io/floci), un emulador de AWS | `infra/envs/local`, con los mismos módulos de Terraform |
 
-**Estado:** la aplicación, la infraestructura y el pipeline están completos y probados en el entorno local. El primer despliegue en AWS es la fase siguiente, F7 (ver [Despliegue en AWS](#despliegue-en-aws)).
+**Estado:** la aplicación, la infraestructura y el pipeline están completos y probados de punta a punta en el entorno local, y en la CI en cada PR. El despliegue completo en AWS está en curso (ver [Despliegue en AWS](#despliegue-en-aws)).
 
-```
-Navegador ──▶ S3 (Next.js estático) ──▶ API Gateway (HTTP API + JWT de Cognito) ──▶ Lambdas (Node.js) ──▶ RDS PostgreSQL
-                                                                                       │
-                                                                                       └─▶ SQS ──▶ Lambda notifier ──▶ SES
+```mermaid
+flowchart LR
+  U([Navegador])
+  subgraph AWS
+    CF["CloudFront + S3<br/>Next.js estático"]
+    COG["Cognito<br/>usuarios y grupos"]
+    APIGW["API Gateway<br/>HTTP API + JWT authorizer"]
+    subgraph VPC["VPC privada"]
+      L["Lambdas<br/>me · resources · bookings · admin"]
+      N["Lambda notifier"]
+      DB[("RDS PostgreSQL")]
+    end
+    SQS["SQS + DLQ"]
+    SES["SES"]
+  end
+  U -->|HTTPS| CF
+  U -->|login| COG
+  U -->|Bearer JWT| APIGW
+  APIGW -.->|valida el token| COG
+  APIGW --> L
+  L --> DB
+  L -->|publica tras el commit| SQS
+  SQS --> N
+  N --> DB
+  N --> SES
 ```
 
 | | |
@@ -24,7 +50,18 @@ Navegador ──▶ S3 (Next.js estático) ──▶ API Gateway (HTTP API + JWT
 | **Frontend** | Next.js 16 con export estático, React 19, Tailwind 4 y TanStack Query |
 | **Infra** | Terraform con módulos compartidos y un root por entorno (`envs/local`, `envs/aws`) |
 | **Tests** | Vitest (unit e integración con Testcontainers), `terraform test`, E2E de la API y Playwright |
-| **CI/CD** | GitHub Actions: lint, tests, build y E2E contra el entorno local en cada PR. Deploy a AWS por OIDC, que se habilita en F7 |
+| **CI/CD** | GitHub Actions: lint, tests, build y E2E contra el entorno local en cada PR. Deploy a AWS por OIDC, con aprobación manual |
+
+## Decisiones de diseño
+
+- **Una doble reserva es imposible por diseño, no por código.** Una *exclusion constraint* de PostgreSQL (`btree_gist`) rechaza cualquier solapamiento. Un test de integración lanza 20 usuarios en paralelo contra el mismo turno y verifica que haya exactamente 1 reserva y 19 rechazos. El límite de reservas por usuario también se sostiene bajo concurrencia, con un bloqueo de fila.
+- **Las fechas se calculan en tiempo absoluto, con Temporal.** Los turnos se generan correctamente en los días de cambio de hora, y los tests cubren una zona sin horario de verano (Buenos Aires) y otra con él (Nueva York).
+- **Las notificaciones no afectan a la reserva.** Se publican en SQS después del commit; una Lambda las procesa de forma idempotente por `event_id`, con reintentos y una DLQ al tercer intento.
+- **Un solo contrato.** Los esquemas Zod de `packages/shared` los usan la API, el frontend y los E2E, que validan cada respuesta contra ellos.
+- **Seguridad:** el frontend guarda los tokens solo en memoria (nunca en `localStorage` ni en cookies), la Lambda exige un ID token, y no hay secretos en el repo: gitleaks corre en un hook de pre-commit y en la CI.
+- **La infraestructura se prueba.** `terraform test` verifica, entre otras cosas, que no haya rutas `{proxy+}`, que solo la Lambda de reservas publique en SQS y solo el notifier envíe emails, que RDS sea privada y que el bucket del sitio solo lo lea CloudFront.
+- **Mismos módulos para el emulador y para AWS.** Las diferencias viven únicamente en `infra/envs/*`. Probar contra el emulador dejó 10 hallazgos documentados en [`docs/spikes/floci.md`](docs/spikes/floci.md), como la falta de CORS en Cognito y en la API.
+- **Un entorno que se borra solo y sin sorpresas.** `pnpm aws:destroy` borra en orden y verifica por tags que no quede nada antes de tocar el state. Una sesión de prueba en AWS cuesta menos de 0,30 USD, según la estimación del [SPEC §11.2](docs/SPEC.md).
 
 ## Prerequisitos
 
@@ -98,7 +135,7 @@ La lista completa y sus detalles están en [`AGENTS.md`](AGENTS.md#comandos).
 apps/web/          Frontend Next.js (export estático)
 services/api/      Lambdas: dominio puro, servicios, repositorios, handlers y migraciones
 packages/shared/   Contrato de la API: esquemas Zod y códigos de error
-infra/             Terraform: modules/, envs/local (Floci), envs/aws y bootstrap/ (sin aplicar)
+infra/             Terraform: modules/, envs/local (Floci), envs/aws y bootstrap/ (state y OIDC)
 scripts/           doctor y scripts del entorno local, todos en Node
 docs/              Especificación, tareas y resultados del spike de Floci
 ```
@@ -122,7 +159,7 @@ docs/              Especificación, tareas y resultados del spike de Floci
 
 ## Despliegue en AWS
 
-Es el objetivo del proyecto (fase F7). El entorno de AWS se usa por sesiones: se despliega, se prueba y se borra entero. **Una sesión de 3 h cuesta menos de 0,30 USD.**
+Es el objetivo del proyecto (fase F7) y está en curso. El bootstrap ya se aplicó en una cuenta real. El despliegue completo está pendiente de que AWS verifique la cuenta para poder crear la distribución de CloudFront. El entorno de AWS se usa por sesiones: se despliega, se prueba y se borra entero. **Una sesión de 3 h cuesta menos de 0,30 USD** (estimado).
 
 En AWS, las Lambdas corren en subnets privadas sin salida a Internet: llegan a Secrets Manager, SQS y SES por VPC endpoints. El sitio se sirve por CloudFront con HTTPS, desde un bucket privado.
 
