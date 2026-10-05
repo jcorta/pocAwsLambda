@@ -73,7 +73,7 @@ pnpm se habilita con `corepack enable`, que lee la versión del campo `packageMa
 | `pnpm --filter @reservas/api db:generate` | Genera una migración SQL a partir de los cambios en `src/infra/db/schema.ts`. Lo que Drizzle no expresa (exclusion constraints, extensiones, datos) va en una migración manual (`drizzle-kit generate --custom`) |
 | `pnpm aws:deploy` | **AWS:** bootstrap si falta, build, `plan`, confirmación (`aplicar`), `apply`, migrator, sitio y smoke tests. Requiere la AWS CLI v2 con sesión iniciada y `infra/envs/aws/terraform.tfvars` (SPEC §11.1). **Genera costos: no correrlo sin aprobación** |
 | `pnpm aws:admin <email>` | **AWS:** suma un usuario registrado al grupo `admin` |
-| `pnpm aws:destroy [--keep-bootstrap]` | **AWS:** borra todo en orden (confirmación `borrar`). Solo toca el bootstrap con el state vacío y sin recursos con los tags del proyecto |
+| `pnpm aws:destroy [--keep-bootstrap] [--ignore-tag-index]` | **AWS:** borra todo en orden (confirmación `borrar`). Solo toca el bootstrap con el state vacío y sin recursos con los tags del proyecto |
 | `pnpm secrets:staged` / `pnpm secrets:history` | gitleaks (en Docker) sobre lo que está por commitearse, o sobre todo el historial |
 
 - El resto de los comandos (`npm run doctor`, `pnpm local:up`, etc.) están definidos en SPEC §10.1 y se agregan a esta tabla a medida que existan.

@@ -159,7 +159,7 @@ docs/              Especificación, tareas y resultados del spike de Floci
 
 ## Despliegue en AWS
 
-Es el objetivo del proyecto (fase F7) y está en curso. El bootstrap ya se aplicó en una cuenta real. El despliegue completo está pendiente de que AWS verifique la cuenta para poder crear la distribución de CloudFront. El entorno de AWS se usa por sesiones: se despliega, se prueba y se borra entero. **Una sesión de 3 h cuesta menos de 0,30 USD** (estimado).
+Es el objetivo del proyecto (fase F7) y está en curso. Un primer despliegue real creó 44 de los 85 recursos del plan (red, VPC endpoints, Cognito, SQS y SES, entre otros) y se borró con `aws:destroy`. El despliegue completo está pendiente de que AWS verifique la cuenta para poder crear la distribución de CloudFront. El entorno de AWS se usa por sesiones: se despliega, se prueba y se borra entero. **Una sesión de 3 h cuesta menos de 0,30 USD** (estimado).
 
 En AWS, las Lambdas corren en subnets privadas sin salida a Internet: llegan a Secrets Manager, SQS y SES por VPC endpoints. El sitio se sirve por CloudFront con HTTPS, desde un bucket privado.
 
