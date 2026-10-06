@@ -31,7 +31,7 @@ Si una tarea necesita cambiar algo de lo especificado (una regla, un endpoint, u
 - Hecho: F4, notificaciones (SQS, `notifier` idempotente y SES; E2E de emails en la CI).
 - Hecho: F5, frontend (Next.js estático, auth con Cognito en memoria, páginas de usuario y admin, sitio en S3 y E2E de UI con Playwright en la CI).
 - Hecho: F6, endurecimiento (`terraform test` y tflint, umbrales de cobertura, access logs, `envs/aws` e `infra/bootstrap` sin aplicar, `deploy-aws.yml` deshabilitado, README y checklist de publicación).
-- Próximo: F7, el despliegue en AWS, que es el objetivo del proyecto. Empieza por decidir D-3.1. No se aplica nada en AWS sin aprobación.
+- En curso: F7, el despliegue en AWS, que es el objetivo del proyecto. Una primera sesión desplegó todo y pasó los smoke tests; falta probar `deploy-aws.yml` con el cambio de una Lambda. No se aplica ni se borra nada en AWS sin aprobación.
 - La estructura del monorepo está en SPEC §1.5 y §6.5:
   ```
   apps/web/          Next.js (export estático)
