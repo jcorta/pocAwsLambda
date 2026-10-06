@@ -132,7 +132,14 @@ Revisada el 2026-10-03. Lo que queda abierto lo hace el dueño del repo en GitHu
 - [x] Repo público
 - [ ] Environment `aws`, variables del repo y `AWS_DEPLOY_ENABLED=true`
 - [ ] Un cambio de lógica en una Lambda desplegado por PR y `deploy-aws.yml`
-- [ ] `pnpm aws:destroy` (todo, incluido el bootstrap) y borrar `AWS_DEPLOY_ENABLED`
+- [ ] `pnpm aws:destroy` (todo, incluido el bootstrap) y borrar `AWS_DEPLOY_ENABLED`. La primera sesión ya se borró entera (2026-10-06): este ítem es el cierre de la sesión del pipeline
+
+**Pendientes de la primera sesión en AWS:**
+- [ ] Scripts: `aws:deploy` y `aws:destroy` revisan cuánto le queda a la sesión SSO antes de empezar y se detienen con un aviso claro. El primer `destroy` se cortó a mitad porque las credenciales (1 h) vencieron: Terraform no pudo guardar el state ni liberar el lock, y hubo que borrar `terraform.tfstate.tflock` de S3 a mano
+- [ ] Scripts: con `--ignore-tag-index`, no esperar los 3 minutos de reintentos del índice de tags
+- [ ] Subir la duración de la sesión del permission set de Identity Center a 8 h (se hace en la consola de AWS)
+- [ ] Opcional: un remitente de otro dominio para ver los emails de las reservas (con `@gmail.com`, Gmail no los muestra: SPEC §11.3)
+- [ ] Opcional: el primer `plan` del pipeline puede marcar todas las Lambdas como cambiadas, porque los bundles armados en Linux pueden diferir byte a byte de los de Windows. No es un error: desde el segundo cambio en adelante, el `plan` solo toca la Lambda modificada
 
 ---
 
