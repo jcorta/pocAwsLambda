@@ -123,11 +123,14 @@ Revisada el 2026-10-03. Lo que queda abierto lo hace el dueño del repo en GitHu
 
 **Sesión en AWS (§11.1):**
 - [x] Prerequisitos: AWS CLI v2 con sesión iniciada (SSO), alerta de Budgets y `terraform.tfvars`
-- [ ] Caso de AWS Support (*Account and billing*) para verificar la cuenta: CloudFront falló con `Your account must be verified` en el primer intento (2026-10-05)
-- [ ] Reintentar RDS: `InsufficientDBInstanceCapacity` con `gp2` en el primer intento. Ahora `gp3` y AZ configurables
-- [ ] `pnpm aws:deploy`, verificación del remitente de SES y smoke tests
-- [ ] Registro real con código de verificación, `aws:admin` y los recorridos de §8.2 a mano, con emails
-- [ ] Repo público, environment `aws`, variables del repo y `AWS_DEPLOY_ENABLED=true`
+- [x] Verificación de la cuenta para CloudFront: falló en el primer intento (`Your account must be verified`) y se resolvió sin abrir un caso (probablemente al actualizar el medio de pago)
+- [x] RDS: el `InsufficientDBInstanceCapacity` del primer intento era una clase que la cuenta no podía pedir; ahora el valor por defecto es `db.t3.micro`
+- [x] `pnpm aws:deploy`: 85 recursos desplegados en 14 min, migraciones y 5 smoke tests en verde (2026-10-05)
+- [x] Verificación del remitente de SES, registro real con código de verificación y `aws:admin`
+- [x] Recorrido manual: crear un recurso y reservar un turno, con el notifier enviando por SES. **El email no se vio en Gmail**: SES lo aceptó sin rebotes, y se atribuye al remitente `@gmail.com` (SPEC §11.3)
+- [ ] Cancelar la reserva y los demás recorridos de §8.2 a mano
+- [x] Repo público
+- [ ] Environment `aws`, variables del repo y `AWS_DEPLOY_ENABLED=true`
 - [ ] Un cambio de lógica en una Lambda desplegado por PR y `deploy-aws.yml`
 - [ ] `pnpm aws:destroy` (todo, incluido el bootstrap) y borrar `AWS_DEPLOY_ENABLED`
 

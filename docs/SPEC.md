@@ -667,9 +667,9 @@ provider "aws" {
 | Variable | local | aws |
 |---|---|---|
 | `enable_cloudfront` | `false` | `true` |
-| `db_instance_class` | `db.t4g.micro` (Floci lo ignora) | `db.t4g.micro` |
+| `db_instance_class` | `db.t4g.micro` (Floci lo ignora) | `db.t3.micro`. En cuentas antiguas `db.t4g.micro` no figura entre las clases que se pueden pedir (`aws rds describe-orderable-db-instance-options`), y RDS responde un `InsufficientDBInstanceCapacity` engañoso. `db.t3.micro` se puede pedir en cuentas nuevas y antiguas |
 | `db_deletion_protection`, `db_backup_retention_days` | `false`, `0` | `true`, `7` |
-| `db_storage_type` | el del provider | `gp3`: RDS a veces no tiene capacidad de `db.t4g.micro` con `gp2` (`InsufficientDBInstanceCapacity`, primer despliegue en AWS) |
+| `db_storage_type` | el del provider | `gp3` |
 | `availability_zones` | `us-east-1a` y `us-east-1b` | las mismas, configurables: si una zona no tiene capacidad, se prueban otras |
 | `lambda_architecture` | `x86_64` | `arm64` (más barato) |
 | `cognito_issuer_url` | `http://localhost:4566/<poolId>` (verificado en F0) | `https://cognito-idp.<region>.amazonaws.com/<poolId>` |
@@ -988,6 +988,7 @@ El entorno de AWS se usa por sesiones: se despliega, se prueba (incluidos cambio
 **Emails en AWS:**
 - **Cognito:** los códigos de verificación los envía Cognito con su remitente por defecto (gratis, hasta 50 por día). No se configura Cognito con SES.
 - **Reservas:** los emails los envía SES desde el email verificado en `ses_from`. En el *sandbox* de SES solo se puede enviar a direcciones verificadas, así que las pruebas usan ese mismo email, u otros verificados en la consola.
+- **Remitente `@gmail.com`:** SES acepta y entrega el mensaje, sin rebotes, pero Gmail no lo muestra, porque SES no puede autenticarse como `gmail.com`. Para ver los emails de reservas hace falta un remitente de otro dominio, o un dominio propio.
 - **Dominio propio:** con uno (DKIM, SPF y DMARC) se puede pedir salir del sandbox. Queda fuera del alcance del POC.
 
 **Mejoras posibles para un entorno permanente:**
@@ -1000,7 +1001,7 @@ El entorno de AWS se usa por sesiones: se despliega, se prueba (incluidos cambio
 | Recurso | USD por hora | Sesión de 3 h | Si quedara prendido un mes |
 |---|---|---|---|
 | 3 interface endpoints en 1 AZ (D-3.1) | ~0,03 | ~0,09 | ~22 |
-| RDS `db.t4g.micro` y 20 GB (gratis con la capa gratuita clásica) | ~0,016 | ~0,05 | ~15 |
+| RDS `db.t3.micro` y 20 GB (gratis con la capa gratuita clásica) | ~0,02 | ~0,06 | ~15 |
 | Lambda, API Gateway, SQS, SES, S3, CloudFront y Cognito | por uso | ~0 | ~0–2 |
 | Secrets Manager (30 días gratis por secreto nuevo) | — | ~0 | 0,40 |
 | Bootstrap: bucket del state y rol | — | ~0 | ~0 |
@@ -1018,9 +1019,10 @@ El entorno de AWS se usa por sesiones: se despliega, se prueba (incluidos cambio
 | Agotar las conexiones de Postgres con muchas Lambdas en paralelo | Errores 5xx con carga | `max: 1` por instancia y concurrencia reservada acotada. RDS Proxy en AWS |
 | Arranques en frío de Lambdas en VPC | Latencia en el primer request | Aceptado en el POC. Bundles chicos con esbuild |
 | SES sandbox y entregabilidad | Los emails no llegan en AWS | Remitente y destinatarios verificados (§11.1, "Emails en AWS"). Con dominio propio, salir del sandbox |
+| Remitente `@gmail.com` en SES | SES acepta y entrega el mensaje (sin rebotes), pero Gmail lo descarta o lo esconde, porque no puede autenticarse como `gmail.com` | Se observó en el primer despliegue: el notifier registró `result: sent` y SES no marcó rebotes, y el mail no apareció. Usar un remitente de otro dominio, o un dominio propio con DKIM, SPF y DMARC |
 | Pérdida de emails si falla SQS (decisión v1) | El usuario no recibe la notificación | Log `notification_publish_failed`. Extensión E-01 |
 | Cuenta nueva de AWS: CloudFront exige verificarla (`AccessDenied: Your account must be verified…`) | No se puede crear la distribución, y sin ella el sitio no tiene HTTPS ni login (hallazgo A8) | Abrir un caso gratuito en *Account and billing* de AWS Support antes de la sesión (suele tardar de 24 a 48 h). Hasta entonces, no desplegar |
-| RDS sin capacidad de `db.t4g.micro` en las AZ elegidas (`InsufficientDBInstanceCapacity`) | El `apply` falla en RDS, con los endpoints ya cobrando | `gp3`, otras AZ (`availability_zones`) o reintentar más tarde. `aws:destroy` soporta un despliegue incompleto |
+| RDS responde `InsufficientDBInstanceCapacity` (visto en el primer despliegue, con `db.t4g.micro` y tanto con `gp2` como con `gp3`) | El `apply` falla en RDS, con los endpoints ya cobrando | La causa era que la cuenta, creada en 2016, no podía pedir `db.t4g.micro`: no figuraba en `aws rds describe-orderable-db-instance-options`. Ahora el valor por defecto es `db.t3.micro`. Para otra clase o zonas, `db_instance_class` y `availability_zones`. `aws:destroy` soporta un despliegue incompleto |
 | Dejar el entorno de AWS prendido | Costo mensual (§11.2) | Alerta de AWS Budgets de 1 USD y `pnpm aws:destroy` al terminar cada sesión |
 | Borrar el state antes que los recursos | Recursos huérfanos que siguen cobrando y chocan con el próximo deploy | `aws:destroy` borra el bootstrap solo con el state vacío y sin recursos con los tags del proyecto |
 

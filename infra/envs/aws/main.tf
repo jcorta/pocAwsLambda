@@ -34,12 +34,16 @@ variable "ses_from" {
 }
 
 variable "db_instance_class" {
-  type    = string
-  default = "db.t4g.micro"
+  # db.t3.micro y no db.t4g.micro: en cuentas antiguas db.t4g.micro no figura entre las clases que se pueden pedir
+  # (describe-orderable-db-instance-options) y RDS responde un InsufficientDBInstanceCapacity engañoso.
+  # db.t3.micro se puede pedir en cuentas nuevas y antiguas, y también es de la capa gratuita.
+  description = "Clase de la instancia de RDS."
+  type        = string
+  default     = "db.t3.micro"
 }
 
 variable "db_storage_type" {
-  description = "gp3: RDS a veces no tiene capacidad de db.t4g.micro con gp2 (InsufficientDBInstanceCapacity)."
+  description = "Tipo de almacenamiento de RDS."
   type        = string
   default     = "gp3"
 }
